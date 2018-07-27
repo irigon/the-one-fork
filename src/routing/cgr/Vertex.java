@@ -28,6 +28,10 @@ public class Vertex {
 		receiver = vertex.receiver;
 	}
 	
+	public String get_id() {
+		return vid;
+	}
+	
 	public DTNHost get_sender() {
 		return sender;
 	}
@@ -56,6 +60,18 @@ public class Vertex {
 	
 	public List<DTNHost> get_hosts(){
 		return contact.get_hosts();
+	}
+	
+	public double begin() {
+		return contact.begin();
+	}
+	
+	public double end() {
+		return contact.end();
+	}
+	
+	public Vertex replicate() {
+		return new Vertex(this);
 	}
 	
 	public DTNHost get_common_host(Vertex x) {

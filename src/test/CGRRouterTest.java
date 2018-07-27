@@ -3,6 +3,9 @@ package test;
 import static org.junit.Assert.assertNotEquals;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import core.Coord;
 import core.DTNHost;
@@ -11,6 +14,8 @@ import interfaces.SimpleBroadcastInterface;
 import routing.EpidemicRouter;
 import routing.MessageRouter;
 import routing.cgr.Contact;
+import routing.cgr.Edge;
+import routing.cgr.Graph;
 import routing.cgr.Vertex;
 
 public class CGRRouterTest extends AbstractRouterTest {
@@ -46,6 +51,10 @@ public class CGRRouterTest extends AbstractRouterTest {
 		// Verify cid creation
 		assertEquals(c1.get_id(), "cid_h0_h1_0_0");
 		assertEquals(c3.get_id(), "cid_h0_h1_100_0");
+		assertEquals(c1.begin(), 0.0);
+		assertEquals(c1.end(), 10.0);
+		assertEquals(c3.begin(), 100.0);
+		assertEquals(c3.end(), 101.0);
 		
 		// Assert hash creation
 		assertNotEquals(c1.hashCode(), 0);
@@ -141,6 +150,8 @@ public class CGRRouterTest extends AbstractRouterTest {
 		DTNHost h11 = utils.createHost(c0, "h11");
 		Contact c1 = new Contact(h10, h11, 0.0, 10.0);
 		Vertex v1 = new Vertex("vertex_test", c1, false);
+		assertEquals(c1.begin(), 0.0);
+		assertEquals(c1.end(), 10.0);
 		assertNull(v1.get_receiver());
 		assertNull(v1.get_sender());
 		v1.set_receiver(h10);
@@ -184,4 +195,68 @@ public class CGRRouterTest extends AbstractRouterTest {
 		assertEquals(h11, v1.get_common_host(v2));
 	}
 
+	/*
+	 * Edge tests
+	 */
+	// test Edge creation
+	public void test_edge_creation() {
+		DTNHost h10 = utils.createHost(c0, "h10");
+		DTNHost h11 = utils.createHost(c0, "h11");
+		DTNHost h12 = utils.createHost(c0, "h12");
+		Contact c1 = new Contact(h10, h11, 0.0, 10.0);
+		Contact c2 = new Contact(h11, h12, 20.0, 30.0);
+		Vertex v1 = new Vertex("vertex1", c1, false);
+		Vertex v2 = new Vertex("vertex2", c2, false);
+		Edge e1 = new Edge(v1, v2);
+		
+		assertEquals(e1.get_src_begin(), 0.0);
+		assertEquals(e1.get_src_end(), 10.0);
+		assertEquals(e1.get_dst_begin(), 20.0);
+		assertEquals(e1.get_dst_end(), 30.0);
+		assertEquals(e1.get_src_id(), "vertex1");
+		assertEquals(e1.get_dest_id(), "vertex2");
+		assertEquals(e1.toString(), "edge_vertex1_vertex2");
+	}
+	
+	/*
+	 * Graph tests
+	 */
+	
+	public void test_graph_creation() {
+		DTNHost h10 = utils.createHost(c0, "h10");
+		DTNHost h11 = utils.createHost(c0, "h11");
+		DTNHost h12 = utils.createHost(c0, "h12");
+		DTNHost h13 = utils.createHost(c0, "h12");
+		Contact c1 = new Contact(h10, h11, 0.0, 10.0);
+		Contact c2 = new Contact(h11, h12, 20.0, 30.0);		
+		Contact c3 = new Contact(h12, h13, 40.0, 50.0);
+		Vertex v1 = new Vertex("vertex1", c1, false);
+		Vertex v2 = new Vertex("vertex2", c2, false);
+		Vertex v3 = new Vertex("vertex3", c3, false);
+		Edge e1 = new Edge(v1, v2);
+		Edge e2 = new Edge(v2, v3);
+
+		Map<String, Vertex> vertices = new HashMap<>();
+		vertices.put("vertex1", v1);
+		vertices.put("vertex2", v2);
+		vertices.put("vertex3", v3);
+		Map<String, List<Edge>> edges = new HashMap<>();
+		edges.put("vertex1", Arrays.asList(e1));
+		edges.put("vertex2", Arrays.asList(e1, e2));
+		edges.put("vertex3", Arrays.asList(e2));
+
+		Graph g1 = new Graph(vertices, edges);
+
+		// test clone
+		Graph g2 = new Graph(g1);
+		assertNotEquals(System.identityHashCode(g1), System.identityHashCode(g2));
+		assertEquals(g2.get_edges().size(), g1.get_edges().size());
+		assertEquals(g2.get_vertice_map().size(), g1.get_vertice_map().size());
+		
+	}
+
+	public void test_graph_clone() {
+	}
+	
+	
 }

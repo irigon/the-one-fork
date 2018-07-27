@@ -100,6 +100,15 @@ public class Contact {
 		return Arrays.asList(host_a, host_b);
 	}
 		
+	public double begin() {
+		return begin;
+	}
+
+	public double end() {
+		return end;
+	}
+
+	
     @Override
     public int hashCode() {
         if (hash == 0)
