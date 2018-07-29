@@ -16,6 +16,7 @@ import routing.MessageRouter;
 import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
+import routing.cgr.RouteSearch;
 import routing.cgr.Vertex;
 
 public class CGRRouterTest extends AbstractCGRRouterTest {
@@ -37,18 +38,18 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		ts.putSetting(NetworkInterface.TRANSMIT_RANGE_S, "10.0");
 		ts.putSetting(NetworkInterface.TRANSMIT_SPEED_S, "15");
 
-		assertEquals(c1, c4);
+		assertEquals(c3, c1);
 		
 		// Verify cid creation
-		assertEquals(c1.get_id(), "cid_h10_h11_0_0");
-		assertEquals(c5.get_id(), "cid_h10_h11_100_0");
-		assertEquals(c1.begin(), 0.0);
-		assertEquals(c1.end(), 10.0);
-		assertEquals(c5.begin(), 100.0);
-		assertEquals(c5.end(), 101.0);
+		assertEquals(c3.get_id(), "cid_h10_h11_0_0");
+		assertEquals(c2.get_id(), "cid_h10_h11_100_0");
+		assertEquals(c3.begin(), 0.0);
+		assertEquals(c3.end(), 10.0);
+		assertEquals(c2.begin(), 100.0);
+		assertEquals(c2.end(), 101.0);
 		
 		// Assert hash creation
-		assertNotEquals(c1.hashCode(), 0);
+		assertNotEquals(c3.hashCode(), 0);
 	}
 
 	// Test contact transmission speed math 
@@ -59,7 +60,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		h1.setLocation(new Coord(0.1, 0.0));
 		
 		// default transmission_speed is 10
-		assertEquals(c1.get_transmission_speed(), 10);
+		assertEquals(c3.get_transmission_speed(), 10);
 		
 		/* increasing the speed of the interfaces should increase the 
 		*  contact speed
@@ -72,8 +73,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		h10.setLocation(new Coord(0.0, 0.0));
 		h11.setLocation(new Coord(2.1, 0.0));
 		
-		Contact c2 = new Contact(hx, hy, 0.0, 10.0);
-		assertEquals(c2.get_transmission_speed(), 15);
+		Contact c4 = new Contact(hx, hy, 0.0, 10.0);
+		assertEquals(c4.get_transmission_speed(), 15);
 		
 		/* 
 		 * Moving one interface away, get speed 0
@@ -100,20 +101,25 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		hy.getInterfaces().add(ni2);
 		
 		
-		// create a contact c4, but 200.0 is still too far
-		Contact c4 = new Contact(hx, hy, 30.0, 40.0);
-		assertEquals(c4.get_transmission_speed(), 0);
+		// create a contact c1, but 200.0 is still too far
+		Contact c1 = new Contact(hx, hy, 30.0, 40.0);
+		assertEquals(c1.get_transmission_speed(), 0);
 		
 		
 		// approximate h10, so the distance stays in the transmit range
 		hx.setLocation(new Coord(150.0, 0.0));
-		Contact c5 = new Contact(hx, hy, 40.0, 50.0);
-		assertEquals(c5.get_transmission_speed(), 2);
+		Contact c2 = new Contact(hx, hy, 40.0, 50.0);
+		assertEquals(c2.get_transmission_speed(), 2);
+	}
+	
+	public void test_current_capacity() {
+		assertEquals(c4.get_current_capacity(), (c4.end()-c4.adjusted_begin()) * c4.get_transmission_speed());
+		assertEquals(c4.get_current_capacity(), 100.0);
 	}
 	
 	public void test_get_other_host() {
-		Contact c1 = new Contact(h0, h1, 0.0, 10.0);
-		assertEquals(c1.get_other_host(h0), h1);
+		Contact c3 = new Contact(h0, h1, 0.0, 10.0);
+		assertEquals(c3.get_other_host(h0), h1);
 		
 	}
 
@@ -135,8 +141,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	
 	// test sender/receiver
 	public void test_sender_receiver() {
-		assertEquals(c1.begin(), 0.0);
-		assertEquals(c1.end(), 10.0);
+		assertEquals(c3.begin(), 0.0);
+		assertEquals(c3.end(), 10.0);
 		assertNull(v1.get_receiver());
 		assertNull(v1.get_sender());
 		v1.set_receiver(h10);
@@ -161,8 +167,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	
 	// test get_common_host
 	public void test_get_common_host() {
-		Vertex v1 = new Vertex("vertex1", c1, false);
-		Vertex v2 = new Vertex("vertex2", c2, false);
+		Vertex v1 = new Vertex("vertex1", c3, false);
+		Vertex v2 = new Vertex("vertex2", c4, false);
 		assertEquals(h11, v1.get_common_host(v2));
 	}
 
@@ -175,9 +181,9 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(e2.get_src_end(), 10.0);
 		assertEquals(e2.get_dst_begin(), 20.0);
 		assertEquals(e2.get_dst_end(), 30.0);
-		assertEquals(e2.get_src_id(), "vertex_c1");
-		assertEquals(e2.get_dest_id(), "vertex_c2");
-		assertEquals(e2.toString(), "edge_vertex_c1_vertex_c2");
+		assertEquals(e2.get_src_id(), "vertex_1");
+		assertEquals(e2.get_dest_id(), "vertex_3");
+		assertEquals(e2.toString(), "edge_vertex_1_vertex_3");
 	}
 	
 	/*
@@ -209,6 +215,17 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	 * Route search
 	 */
 	public void test_route_search_creation() {
+		
+		/*
+		 * Initialization
+		 */
+		// 1 vertex graph
+		RouteSearch rs = new RouteSearch(g01);
+		//rs.init(m01, 0.0, m01.getFrom());
+		//rs.search(m01.getFrom(), 0.0, m01);
+		
+		System.out.println("");
+		
 		
 	}
 }
