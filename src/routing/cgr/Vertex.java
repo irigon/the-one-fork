@@ -74,6 +74,14 @@ public class Vertex {
 		return new Vertex(this);
 	}
 	
+	public double current_capacity() {
+		return contact.get_current_capacity();
+	}
+	
+	public double adjusted_begin() {
+		return contact.adjusted_begin();
+	}
+	
 	public DTNHost get_common_host(Vertex x) {
 		List<DTNHost> x_hosts = x.get_hosts();
 		for (DTNHost l : contact.get_hosts()) {

@@ -35,6 +35,7 @@ public class Contact {
 		cid = "cid_" + host_a + "_" + host_b + "_" + (int)contactStart + "_" + 0;
 		
 		begin = contactStart;
+		adjusted_begin = begin;
 		end = contactEnd;
 		transmission_speed = calculate_transmission_speed(a, b);
 		hash = 0;
@@ -85,6 +86,10 @@ public class Contact {
 		return transmission_speed;
 	}
 	
+	public double get_current_capacity() {
+		return (end - adjusted_begin) * transmission_speed;
+	}
+	
 	public String get_id() {
 		return cid;
 	}
@@ -102,6 +107,10 @@ public class Contact {
 		
 	public double begin() {
 		return begin;
+	}
+	
+	public double adjusted_begin () {
+		return adjusted_begin;
 	}
 
 	public double end() {

@@ -1,5 +1,6 @@
 package routing.cgr;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,9 @@ public class Graph {
 	 * @return copy of the original graph
 	 */
 	private Map<String, Vertex> makeMapCopy(Map<String, Vertex> original) {
+		if (original == null) {
+			return null;
+		}
 		Map<String, Vertex> copy = new HashMap<>(original.size());
 		for (String s : original.keySet()) {
 			copy.put(s,  original.get(s).replicate());
