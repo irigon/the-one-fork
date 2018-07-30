@@ -1,13 +1,10 @@
 package routing.cgr;
 
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import core.DTNHost;
@@ -48,7 +45,7 @@ public class RouteSearch {
     private Vertex create_pivot_and_initialize(DTNHost h, double start_time, double end_time) {
     	Contact c = new Contact(h, h, start_time, end_time);
     	Vertex pivot = new Vertex(c.get_id(), c, true);
-    	String name = end_time == Double.POSITIVE_INFINITY ? "pivot_end" : "pivot_start";
+    	String name = c.get_id();
     	vertices.put(name, pivot);
     	pivot.set_receiver(h);
     	edges.put(pivot.get_id(), new LinkedList<>());
@@ -77,9 +74,9 @@ public class RouteSearch {
     	/* Add an src and end pivot + edges to reach it */
     	double end_time = Double.POSITIVE_INFINITY;
 
-    	Vertex rootVertex = create_pivot_and_initialize(cur, 0, 1);
+    	Vertex rootVertex = create_pivot_and_initialize(cur, 0, end_time);
     	
-    	end_pivot = create_pivot_and_initialize(m.getTo(), end_time-1, end_time);
+    	end_pivot = create_pivot_and_initialize(m.getTo(), 0, end_time);
     	
     	for (Vertex v : vertices.values()) {
     		distances.put(v, Double.POSITIVE_INFINITY);
@@ -155,8 +152,8 @@ public class RouteSearch {
      * @return	moment when the message should arrive at neighbor through this path.
      */
     private double calculate_arrival_time(int size, Vertex cur, Vertex neighbor) {
-    	double neighbor_transmission_time = (double) size / neighbor.get_transmission_speed(); 
-    	return Math.max(distances.get(cur), neighbor.adjusted_begin()) + neighbor_transmission_time;
+    	double neighbor_transmission_time = (double) size / neighbor.get_transmission_speed();
+    	return  Math.max(distances.get(cur), neighbor.adjusted_begin()) + neighbor_transmission_time;
     }
     
     /**
@@ -164,8 +161,9 @@ public class RouteSearch {
      * @param v Vertex to expand (find neighbors)
      * @param m The distance depends on the message size and transmission speed
      */
-    private void relax(Vertex v, int size, int ttl) {
-    	List<Vertex> neighbors = edges.get(v).stream()
+    private Vertex relax(Vertex v, int size, int ttl) {
+    	Vertex pivot = null;
+    	List<Vertex> neighbors = edges.get(v.get_id()).stream()
     			.filter(e -> !settled.contains(e.get_dest_id()))	// filter out settled vertices
     			.filter(e -> e.get_dst_begin() < ttl)				// filter out contacts that start after ttl expiration
     			.map(e -> vertices.get(e.get_dest_id()))
@@ -175,32 +173,48 @@ public class RouteSearch {
 		for (Vertex n : neighbors) {
 			double at = calculate_arrival_time(size, v, n);
 			if (at < distances.get(n) && at < n.end()) { 			// improved distance?
+				predecessors.replace(n, v);
 				distances.replace(n, at);
 				n.set_receiver(v.get_sender());
-				predecessors.replace(n, v);
 				if (!unsettled.contains(n)) {
 					unsettled.add(n);
 				}
+				if (n.is_pivot()) {
+					pivot = n;
+					break;
+				}
 			}
 		}
-    	
-    	System.out.println("TODO: relaxing vertex " + v.get_id());    	
+    	return pivot;
+    }
+    
+    public List<Vertex> construct_path(Vertex end){
+    	List<Vertex> path = new ArrayList<>();
+    	return path;
     }
     
     public List<Vertex> search(DTNHost this_host, double now, Message m) {
     	init (m, now, this_host);
 
     	Vertex cur;
+    	Vertex pivot = null;
     	while (!unsettled.isEmpty()) {
     		cur = get_next_unsettled(m);
     		// TODO:verify when cur becomes null
     		if (cur == null || cur.equals(end_pivot)) { 
     			break;
     		}
-    		relax(cur, m.getSize(), m.getTtl());
+    		pivot = relax(cur, m.getSize(), m.getTtl());
     		unsettled.remove(cur);
     		settled.add(cur);
     	}
-    	return null; // TODO
+    	return construct_path(pivot); // TODO
+    }
+    
+    /**
+     * The following helpers are used for testing purpose
+     */
+    public Map<Vertex, Double> get_distances(){
+    	return distances;
     }
 }

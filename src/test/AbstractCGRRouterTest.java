@@ -25,10 +25,10 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Contact c4;
 	protected Contact c5;
 	
-	protected Vertex  v1;
-	protected Vertex  v2;
 	protected Vertex  v3;
+	protected Vertex  v2;
 	protected Vertex  v4;
+	protected Vertex  v5;
 	
 	protected Edge    e1;
 	protected Edge    e2;
@@ -53,6 +53,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Graph   g05;
 	
 	protected Message m01;
+	protected Message m02;
 	
 	
 	
@@ -73,17 +74,18 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		c4 = new Contact(h11, h12, 20.0, 30.0);
 		c5 = new Contact(h12, h13, 40.0, 50.0);
 
-		v1 = new Vertex("vertex_1", c3, false);
 		v2 = new Vertex("pivot_c1", c1, true);
-		v3 = new Vertex("vertex_3", c4, false);
-		v4 = new Vertex("vertex_4", c5, false);
+		v3 = new Vertex("vertex_3", c3, false);
+		v4 = new Vertex("vertex_4", c4, false);
+		v5 = new Vertex("vertex_5", c5, false);
 
-		e1 = new Edge(v1, v2);
-		e2 = new Edge(v1, v3);
-		e3 = new Edge(v3, v4);
+		e1 = new Edge(v3, v2);
+		e2 = new Edge(v3, v4);
+		e3 = new Edge(v4, v5);
 		
 		// Message from:h11 to:h12, id:"TestMessage", size: 10
-		m01 = new Message(v3.get_hosts().get(0), v3.get_hosts().get(1), "TestMessage", 10);
+		m01 = new Message(v4.get_hosts().get(0), v4.get_hosts().get(1), "TestMessage", 10);
+		m02 = new Message(v3.get_hosts().get(0), v4.get_hosts().get(1), "TestMessage", 10);
 
 		
 		/*
@@ -96,7 +98,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		// create vertices, edges and graph
 		Map<String, Vertex> vmap01 = new HashMap<>();
 		Map<String, List<Edge>> ledges01 = new HashMap<>();
-		vmap01.put(v3.get_id(), v3);
+		vmap01.put(v4.get_id(), v4);
 		for (String vname : vmap01.keySet()) {
 			ledges01.put(vname, new ArrayList<>());
 		}
@@ -108,6 +110,15 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		 *	o----o
 		 */
 		
+		Map<String, Vertex> vmap02 = new HashMap<>();
+		Map<String, List<Edge>> ledges02 = new HashMap<>();
+		vmap02.put(v3.get_id(), v3);
+		vmap02.put(v4.get_id(), v4);
+		for (String vname : vmap02.keySet()) {
+			ledges02.put(vname, new ArrayList<>());
+		}
+		ledges02.get(v3.get_id()).add(e2);
+		g02 = new Graph(vmap02, ledges02);
 		
 		/*
 		 * g3) extending it to 3 nodes in line

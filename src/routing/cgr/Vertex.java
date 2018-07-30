@@ -91,4 +91,39 @@ public class Vertex {
 		}
 		return null;
 	}
+	
+	public DTNHost get_other_host(DTNHost x) {
+		return contact.get_other_host(x);
+	}
+	
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((vid == null) ? 0 : vid.hashCode());
+        return result;
+    }
+
+    /**
+     * warning! this equals method does not consider the residual capacity
+     * @param obj
+     * @return
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Vertex other = (Vertex) obj;
+        if (vid == null) {
+            if (other.vid != null)
+                return false;
+        } else if (!vid.equals(vid))
+            return false;
+
+        return contact.equals(other.contact);
+    }
 }
