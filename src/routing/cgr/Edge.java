@@ -35,7 +35,8 @@ public class Edge {
 	public double get_dst_end() {
 		return destination.end();
 	}
-    
+	
+
 	/**
      * necessary for the hashSet duplicate detection
      * @return has value for this edge

@@ -2,9 +2,11 @@ package routing.cgr;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import core.DTNHost;
@@ -67,14 +69,15 @@ public class RouteSearch {
     	 *	[1] --> can be performed on the original graph
     	 *	[2] --> must be performed on a copy and it is message dependent 
     	 * */
-    	prune(EARLIER_THAN, now);
-    	prune(LATER_THAN, m.getTtl());
+    	prune(cur.toString(), EARLIER_THAN, now);
+    	prune(cur.toString(), LATER_THAN, m.getTtl());
     	prune(m.getHops());
     	
     	/* Add an src and end pivot + edges to reach it */
     	double end_time = Double.POSITIVE_INFINITY;
 
     	Vertex rootVertex = create_pivot_and_initialize(cur, 0, end_time);
+    	List<Vertex> source_vertexes = new ArrayList<>();
     	
     	end_pivot = create_pivot_and_initialize(m.getTo(), 0, end_time);
     	
@@ -85,16 +88,21 @@ public class RouteSearch {
     		if (v.get_hosts().contains(m.getTo()) && !v.is_pivot()) {
     			edges.get(v.get_id()).add(new Edge(v, end_pivot));
     		}
-    		// connects every vertice that contains this host to the pivot
-    		if (v.get_hosts().contains(m.getFrom()) && !v.is_pivot()) {
+    		// connects every vertex containing src host whose contact did not finished to the pivot
+    		if (v.get_hosts().contains(cur) && !v.is_pivot() && v.end() > now) {
     			edges.get(rootVertex.get_id()).add(new Edge(rootVertex, v));
     		}
     	}
-
     	distances.replace(rootVertex, now);
     	unsettled.add(rootVertex);
-
     }
+    
+    public Path get_path(Vertex end_pivot) {
+    	Path p = new Path();
+    	p.path = p.construct(end_pivot, predecessors);
+    	return p;
+    }
+
     
     /**
      * Prune graph given the starting point and direction
@@ -102,11 +110,21 @@ public class RouteSearch {
      * @param when	EARLIER_THAN (prune all branches that end earlier than time)
      * or OLDER_THAN (prune all branches that begin after time)
      */
-    private void prune(int when, double time) {
+    private void prune(String curr_id, int when, double time) {
         switch (when) {
         	case EARLIER_THAN: 
-            	//TODO: prune_old_branches
-            	System.out.println("TODO: prune_old_branches");
+        		for (String id : edges.keySet()) {
+        			Set<Edge> old_edges_set = new HashSet<>(edges.get(id).stream()
+        					// if the current host is the destination of a contact that just finished, it is still
+        					// possible to use the edge from this contact
+        					.filter(edge -> edge.get_src_end() < time && edge.get_dest_id() != curr_id)
+        					.collect(Collectors.toSet()));
+        			edges.get(id).removeAll(old_edges_set);
+        			if (edges.isEmpty()) {
+        				edges.remove(id);
+        				vertices.remove(id);
+        			}
+        		}
         		break;
         	case LATER_THAN: 
 	        	//TODO: prune_future_branches
@@ -193,7 +211,7 @@ public class RouteSearch {
     	return path;
     }
     
-    public List<Vertex> search(DTNHost this_host, double now, Message m) {
+    public Vertex search(DTNHost this_host, double now, Message m) {
     	init (m, now, this_host);
 
     	Vertex cur;
@@ -208,7 +226,7 @@ public class RouteSearch {
     		unsettled.remove(cur);
     		settled.add(cur);
     	}
-    	return construct_path(pivot); // TODO
+    	return pivot;
     }
     
     /**

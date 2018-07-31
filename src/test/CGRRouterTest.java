@@ -4,6 +4,8 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +20,7 @@ import routing.EpidemicRouter;
 import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
+import routing.cgr.Path;
 import routing.cgr.RouteSearch;
 import routing.cgr.Vertex;
 
@@ -263,10 +266,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
     	assertEquals(v4.get_transmission_speed(), 10);
 
     	/*
-		 * 1 vertex graph
+		 * g1 vertex graph
 		 */
-		
-		RouteSearch rs01 = new RouteSearch(g01);
 		
 		initialize_route_search(rs01, m01, 0.0, v4.get_hosts().get(0));
 		//Vertex pivot_begin = create_pivot(v4, v4.get_sender());
@@ -291,10 +292,9 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
     	assertNotNull(end);
     	
 		/*
-		 * 2 vertex graph
+		 * g2 vertex graph
 		 */
 		
-		RouteSearch rs02 = new RouteSearch(g02);
 	    //private Vertex create_pivot_and_initialize(DTNHost h, double start_time, double end_time) {
 		initialize_route_search(rs02, m02, 0.0, v3.get_hosts().get(0));
 		pivot_begin = create_pivot(v3.get_hosts().get(0));
@@ -323,4 +323,153 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
     	assertEquals(rs02.get_distances().get(v4), 21.0);
     	assertEquals(rs02.get_distances().get(pivot_end), 22.0);
 	}
+	
+	public void test_search() {
+		
+		/*
+		 * Search with one vertex
+		 */
+		
+		// 1 vertex graph
+		end_pivot = rs01.search(v4.get_hosts().get(0), 0.0, m01); 
+		assertNotNull(end_pivot);
+		path = rs01.get_path(end_pivot);
+		assertEquals(path.get_path_as_list().get(0), v4);
+		assertEquals(path.get_path_as_list().size(), 1);
+		// 2 vertex graph
+		end_pivot = rs02.search(v3.get_hosts().get(0), 0.0, m02); 
+		path = rs02.get_path(end_pivot);
+		assertEquals(path.get_path_as_list().get(0), v3);
+		assertEquals(path.get_path_as_list().get(1), v4);
+		assertEquals(path.get_path_as_list().size(), 2);
+		// 3 vertex graph
+		end_pivot = rs03.search(v3.get_hosts().get(0), 0.0, m03); 
+		path = rs03.get_path(end_pivot);
+		assertEquals(path.get_path_as_list().get(0), v3);
+		assertEquals(path.get_path_as_list().get(1), v4);
+		assertEquals(path.get_path_as_list().get(2), v5);
+		assertEquals(path.get_path_as_list().size(), 3);
+	}
+	
+	public void test_prune() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		
+		/* 4 vertex graph. x ---- x edges should be discarded
+		 * 	
+		 *  v31    v41
+		 *   x ---- x
+		 *           \
+		 *            o ---- o
+		 *			 / v5    v6
+		 *   x ---- x
+		 *  v3      v4
+		 *
+		 */
+
+		// search starts after the end of contact v41 (45.0)
+		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
+		edges_reflect.setAccessible(true);
+		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs04);
+		assertEquals(edges.get(v3.get_id()).size(), 1);
+		assertEquals(edges.get(v31.get_id()).size(), 1);
+
+		end_pivot = rs04.search(v5.get_hosts().get(0), 46.0, m05); 
+		assertEquals(edges.get(v3.get_id()).size(), 0);
+		assertEquals(edges.get(v31.get_id()).size(), 0);
+
+	}
+	
+	public void test_setting_pivot() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		/* 4 vertex graph, starting at 46.0. Pivot_start should connect only to source (v5) and pivot_end to v6
+		 * 	
+		 *  v31    v41
+		 *   x ---- x
+		 *           \
+		 *            o ---- o
+		 *			 / v5    v6
+		 *   x ---- x
+		 *  v3      v4
+		 *
+		 */
+
+		// search starts after the end of contact v41 (45.0)
+		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
+		edges_reflect.setAccessible(true);
+		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs04);
+
+		end_pivot = rs04.search(v5.get_hosts().get(0), 46.0, m05); 
+
+		
+		Vertex pivot_begin = create_pivot(v5.get_hosts().get(0));
+		assertEquals(edges.get(pivot_begin.get_id()).size(), 1);
+	}
+
+	public void test_simple_decision() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		/*
+		 * g50) one start, two ends
+		 * 		 o	
+		 * 		/
+		 * o---o
+		 * 		\
+		 * 		 o
+		 * 
+		 */
+		
+		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
+		edges_reflect.setAccessible(true);
+		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs05);
+
+		Vertex begin_pivot = create_pivot(v3.get_hosts().get(0));
+		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03);
+		assertNotNull(end_pivot);		
+		path = rs05.get_path(end_pivot);
+		assertEquals(path.get_path_as_list().get(0), v3);
+		assertEquals(path.get_path_as_list().get(1), v4);
+		assertEquals(path.get_path_as_list().get(2), v5);
+		assertEquals(edges.get(begin_pivot.get_id()).get(0).get_dest_id(), v3.get_id());
+		assertEquals(edges.get(begin_pivot.get_id()).size(), 1);
+		assertEquals(edges.get(v51.get_id()).size(), 0);
+	}
+	
+	/*
+	 * g51) one end, two paths
+	 * 		 o	
+	 * 		/ \
+	 * o---o   o
+	 * 		\ /
+	 * 		 o
+	 * 
+	 */
+
+	public void test_convergence() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		Vertex begin_pivot = create_pivot(v3.get_hosts().get(0));
+		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m06);
+		assertNotNull(end_pivot);		
+		path = rs06.get_path(end_pivot);
+
+		assertEquals(path.get_path_as_list().get(0), v3);
+		assertEquals(path.get_path_as_list().get(1), v4);
+		assertEquals(path.get_path_as_list().get(2), v5);
+		assertEquals(path.get_path_as_list().get(3), v6);
+		
+		/*
+		 * g52) one end, two paths
+		 * 		 o	
+		 * 		/ \
+		 * o---o   o----o
+		 * 		\ /
+		 * 		 o
+		 * 
+		 */
+		
+		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m07);
+		assertNotNull(end_pivot);		
+		path = rs06.get_path(end_pivot);
+		assertEquals(path.get_path_as_list().get(0), v3);
+		assertEquals(path.get_path_as_list().get(1), v4);
+		assertEquals(path.get_path_as_list().get(2), v5);
+		assertEquals(path.get_path_as_list().get(3), v6);
+		assertEquals(path.get_path_as_list().get(4), v7);
+	}
+
+
 }
