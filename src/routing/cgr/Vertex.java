@@ -96,6 +96,11 @@ public class Vertex {
 		return contact.get_other_host(x);
 	}
 	
+	@Override
+	public String toString() {
+		return this.get_id() + " [" + this.get_hosts().get(0) + ", " + this.get_hosts().get(1) + "] ";
+	}
+	
     @Override
     public int hashCode() {
         final int prime = 31;
