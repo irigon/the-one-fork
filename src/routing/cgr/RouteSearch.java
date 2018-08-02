@@ -1,6 +1,7 @@
 package routing.cgr;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -101,21 +102,7 @@ public class RouteSearch {
     	settled.clear();
     	unsettled.clear();
     	predecessors.clear();
-    	/* We can prune the graph to perform the search faster. 
-    	 * There are mainly 3 possibilities:
-    	 * 	[1] Delete Vertices (BUT the newest of them) that have the 
-    	 * same hosts in contact and ends before "now" and their edges
-    	 * 	[2] Delete edges and vertices that starts after m.ttl()
-    	 * 	[3] Delete edges and vertices that use vertices already visited
-    	 * 
-    	 * We might send all unusable vertices to settled set to speedup relax phase
- 
-    	 *	[1] --> can be performed on the original graph
-    	 *	[2] --> must be performed on a copy and it is message dependent -- currently not being done.
-    	 * */
-//    	prune(cur.toString(), EARLIER_THAN, now);
-//    	prune(cur.toString(), LATER_THAN, m.getTtl());
-    	prune(m.getHops(), cur);
+    	prune(now);			// prune old vertices
     	
     	/* Add an src and end pivot + edges to reach it */
     	double end_time = Double.POSITIVE_INFINITY;
@@ -147,61 +134,88 @@ public class RouteSearch {
     	return p;
     }
 
-    
     /**
-     * Prune graph given the starting point and direction
-     * @param time	starting point
-     * @param when	EARLIER_THAN (prune all branches that end earlier than time)
-     * or OLDER_THAN (prune all branches that begin after time)
+     * Simple immutable class that stores the hosts of a vertices
+     * as a set to be used in as key in a hashSet (for pruning)
      */
-//    private void prune(String curr_id, int when, double time) {
-//        switch (when) {
-//        	case EARLIER_THAN: 
-//        		for (String id : edges.keySet()) {
-//        			Set<Edge> old_edges_set = new HashSet<>(edges.get(id).stream()
-//        					// if the current host is the destination of a contact that just finished, it is still
-//        					// possible to use the edge from this contact
-//        					.filter(edge -> edge.get_src_end() < time && edge.get_dest_id() != curr_id)
-//        					.collect(Collectors.toSet()));
-//        			edges.get(id).removeAll(old_edges_set);
-//        			if (edges.isEmpty()) {
-//        				edges.remove(id);
-//        				vertices.remove(id);
-//        			}
-//        		}
-//        		break;
-//        	case LATER_THAN: 
-//        		for (String id : edges.keySet()) {
-//        			Set<Edge> old_edges_set = new HashSet<>(edges.get(id).stream()
-//        					.filter(edge -> edge.get_dst_begin() > time)
-//        					.collect(Collectors.toSet()));
-//        			edges.get(id).removeAll(old_edges_set);
-//        			if (edges.isEmpty()) {
-//        				edges.remove(id);
-//        				vertices.remove(id);
-//        			}
-//        		}
-//        		break;
-//        }
-//    }
+    private class Bigram{
+        private Set<DTNHost> hosts_set;
+        private String bid;
+        
+        public Bigram(Set<DTNHost> hset, String bid) {
+        	hosts_set = hset;
+        	this.bid = bid;
+        }
+
+        public String get_bid() {
+        	return bid;
+        }
+        
+        @Override
+        public int hashCode(){
+                final int prime = 31;
+                int result = 1;
+                result = prime * result + ((bid == null) ? 0 : bid.hashCode());
+                return result;
+        }
+
+        @Override 
+        public boolean equals(Object obj){
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            Bigram other = (Bigram) obj;
+            String otherbid = other.get_bid();
+            return (bid.equals(otherbid));
+        }
+    }
     
+    private Bigram create_bigram(Vertex v, List<DTNHost> hosts_list) {
+		String set_bid = hosts_list.get(0).toString() + hosts_list.get(1).toString();
+		Set<DTNHost> hosts_set = new HashSet<>();
+		for (DTNHost h : hosts_list) {
+			hosts_set.add(h);
+		}
+		return new Bigram(hosts_set, set_bid);
+    }
+ 
     /**
-     * Delete already visited edges and vertices
+     * Delete unusable vertices. 
+     * Assumption: If two vertex have the same src/dst hosts and both begin in at some 
+     * point in time in the past we can safely prune the oldest vertex and its edges.
      * @param visited hosts already visited by this message
      */
-    private void prune(List<DTNHost> visited, DTNHost cur) {
-    	//TODO: what to delete here?
-    	//		for (String id : edges.keySet()) {
-//			Set<Edge> visited = new HashSet<>(edges.get(id).stream()
-//					.filter(edge -> edge.) > time)
-//					.collect(Collectors.toSet()));
-//			edges.get(id).removeAll(old_edges_set);
-//			if (edges.isEmpty()) {
-//				edges.remove(id);
-//				vertices.remove(id);
-//			}
-//		}
-//		break;
+    private void prune(double now) {
+    	Map<Bigram, Vertex> v_map = new HashMap<Bigram, Vertex>();
+    	List<Vertex> to_delete = new LinkedList<Vertex>();
+
+    	for (Vertex v : vertices.values()) {
+    		if (v.begin() > now) { // not interested in contacts to come	
+    			continue;
+    		}
+    		List<DTNHost> hosts_list = v.get_hosts();
+			Bigram b = create_bigram(v, hosts_list);
+    		
+    		if (v_map.get(b) == null) { // see vertex for the first time
+    			v_map.put(b, v);
+    			continue;
+    		}	
+    		else if (v_map.get(b).begin() < v.begin()) { // found a vertex to prune
+    			to_delete.add(v_map.get(b));
+    			v_map.put(b, v);
+    		} else {
+    			to_delete.add(v);
+    		}
+    	}
+    	
+    	// prune
+    	for (Vertex v : to_delete) {
+    		edges.remove(v.get_id());
+    		vertices.remove(v.get_id());
+    	}   	
     }
     
     /**
@@ -211,17 +225,17 @@ public class RouteSearch {
      */
     private Vertex get_next_unsettled(Message m) {
 		Vertex next = null;
-		if (!unsettled.isEmpty()) {
-			double shortest_distance = Double.POSITIVE_INFINITY;
-			for (Vertex v : unsettled) {
-				if (distances.get(v) < shortest_distance) {
-					shortest_distance = distances.get(v);
-					next = v;
-				}
+		double shortest_distance = Double.POSITIVE_INFINITY;
+		for (Vertex v : unsettled) {
+			if (distances.get(v) < shortest_distance) {
+				shortest_distance = distances.get(v);
+				next = v;
 			}
 		}
-    	return next;
+		return next;
+
     }
+   
     /**
      * Calculate the best possible distance until the bundle reception at neighbor.
      * neighbor_min_distance takes in account the fact that distances are started at infinity.
@@ -293,12 +307,5 @@ public class RouteSearch {
     		settled.add(cur);
     	}
     	return pivot;
-    }
-    
-    /**
-     * The following helpers are used for testing purpose
-     */
-    public Map<Vertex, Double> get_distances(){
-    	return distances;
     }
 }

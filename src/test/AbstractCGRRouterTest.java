@@ -30,20 +30,28 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Contact c31;
 	protected Contact c4;
 	protected Contact c41;
+	protected Contact c42;
 	protected Contact c5;
 	protected Contact c51;
 	protected Contact c52;
+	protected Contact c53;
+	protected Contact c54;
 	protected Contact c6;
 	protected Contact c7;
 	
+	protected Vertex  v1;
+	protected Vertex  v2;
+	protected Vertex  v21;
 	protected Vertex  v3;
 	protected Vertex  v31;
-	protected Vertex  v2;
 	protected Vertex  v4;
 	protected Vertex  v41;
+	protected Vertex  v42;
 	protected Vertex  v5;
 	protected Vertex  v51;
 	protected Vertex  v52;
+	protected Vertex  v53;
+	protected Vertex  v54;
 	protected Vertex  v6;
 	protected Vertex  v7;
 	protected Vertex  start_pivot;
@@ -59,7 +67,12 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Edge    e34;
 	protected Edge    e4;
 	protected Edge    e41;
+	protected Edge    e42;
+	protected Edge    e43;
+	protected Edge    e44;
 	protected Edge    e5;
+	protected Edge    e61;
+	protected Edge    e62;
 	
 	protected Map<String, Vertex> vmap01;
 	protected Map<String, Vertex> vmap02;
@@ -80,6 +93,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Graph   g05;
 	protected Graph   g06;
 	protected Graph   g07;
+	protected Graph   g08;
 	
 	protected Message m01;
 	protected Message m02;
@@ -88,6 +102,9 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Message m05;
 	protected Message m06;
 	protected Message m07;
+	protected Message m08;
+	protected Message m09;
+	protected Message m10;
 	
 	protected RouteSearch rs01;
 	protected RouteSearch rs02;
@@ -96,6 +113,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected RouteSearch rs05;
 	protected RouteSearch rs06;
 	protected RouteSearch rs07;
+	protected RouteSearch rs08;
 	
 	protected Path path;
 	
@@ -125,49 +143,67 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		h15 = utils.createHost(c0, "h15");
 		
 		c1  = new Contact(h11, h10, 0.0, 10.0);
-		c2  = new Contact(h11, h10, 100.0, 101.0);
+		c2  = new Contact(h11, h10, 100.0, 110.0);
 		c3  = new Contact(h10, h11, 0.0, 10.0);
 		c31  = new Contact(h10, h11, 15.0, 25.0);
 		c4  = new Contact(h11, h12, 20.0, 30.0);
 		c41 = new Contact(h12, h13, 35.0, 45.0);
+		c42  = new Contact(h11, h12, 120.0, 130.0);
 		c5  = new Contact(h12, h13, 40.0, 50.0);
 		c51  = new Contact(h12, h14, 45.0, 55.0);
 		c52  = new Contact(h12, h13, 55.0, 58.0);
+		c53  = new Contact(h12, h13, 75.0, 90.0);
+		c54  = new Contact(h12, h13, 110.0, 115.0);
 		c6  = new Contact(h13, h14, 60.0, 70.0);
 		c7  = new Contact(h14, h15, 80.0, 90.0);
 
+		v1  = new Vertex("vertex_1", c1, false);
 		v2  = new Vertex("pivot_c1", c1, true);
+		v21  = new Vertex("vertex_21", c2, false);
 		v3  = new Vertex("vertex_3", c3, false);
 		v31 = new Vertex("vertex_31", c31, false);
 		v4  = new Vertex("vertex_4", c4, false);
 		v41 = new Vertex("vertex_41", c41, false);
+		v42 = new Vertex("vertex_42", c42, false);
 		v5  = new Vertex("vertex_5", c5, false);
 		v51 = new Vertex("vertex_51", c51, false);
 		v52 = new Vertex("vertex_52", c52, false);
+		v53 = new Vertex("vertex_53", c53, false);
+		v54 = new Vertex("vertex_54", c54, false);
 		v6  = new Vertex("vertex_6", c6, false);
 		v7  = new Vertex("vertex_7", c7, false);
+		
 
 		e1  = new Edge(v3, v2);
 		e2  = new Edge(v3, v4);
 		e21 = new Edge(v31, v41);
 		e3  = new Edge(v4, v5);
 		e31 = new Edge(v41, v5);
-		e32  = new Edge(v4, v51);
-		e33  = new Edge(v4, v52);
-		e34  = new Edge(v4, v7);
-		e4 = new Edge(v5, v6);
+		e32 = new Edge(v4, v51);
+		e33 = new Edge(v4, v52);
+		e34 = new Edge(v4, v7);
+		e4  = new Edge(v5, v6);
 		e41 = new Edge(v52, v6);
-		e5 = new Edge(v6, v7);
+		e42 = new Edge(v51, v52);
+		e43 = new Edge(v51, v53);
+		e44 = new Edge(v51, v54);
+		e5  = new Edge(v6, v7);
+		e61 = new Edge(v1, v42);
+		e62 = new Edge(v21, v42);
+
 		
 		// Message from:h11 to:h12, id:"TestMessage", size: 10
-		m01 = new Message(v4.get_hosts().get(0), v4.get_hosts().get(1), "TestMessage", 10);
-		m02 = new Message(v3.get_hosts().get(0), v4.get_hosts().get(1), "TestMessage", 10);
-		m03 = new Message(v3.get_hosts().get(0), v5.get_hosts().get(1), "TestMessage", 10);
-		m04 = new Message(v4.get_hosts().get(0), v5.get_hosts().get(1), "TestMessage", 10);
-		m05 = new Message(v5.get_hosts().get(0), v6.get_hosts().get(1), "TestMessage", 10);
-		m06 = new Message(v3.get_hosts().get(0), v6.get_hosts().get(1), "TestMessage", 10);
+		m01 = new Message(v4.get_hosts().get(0), v4.get_hosts().get(1),  "TestMessage", 10);
+		m02 = new Message(v3.get_hosts().get(0), v4.get_hosts().get(1),  "TestMessage", 10);
+		m03 = new Message(v3.get_hosts().get(0), v5.get_hosts().get(1),  "TestMessage", 10);
+		m04 = new Message(v4.get_hosts().get(0), v5.get_hosts().get(1),  "TestMessage", 10);
+		m05 = new Message(v5.get_hosts().get(0), v6.get_hosts().get(1),  "TestMessage", 10);
+		m06 = new Message(v3.get_hosts().get(0), v6.get_hosts().get(1),  "TestMessage", 10);
 		m07 = new Message(v3.get_hosts().get(0), v7.get_hosts().get(1), "TestMessage", 10);
-
+		m08 = new Message(v2.get_hosts().get(0), v42.get_hosts().get(1), "TestMessage", 10);
+		m09 = new Message(v51.get_hosts().get(0), v53.get_hosts().get(1), "TestMessage", 10);
+		m10 = new Message(v51.get_hosts().get(1), v54.get_hosts().get(1), "TestMessage", 10);
+		
 		/*
 		 * g1) the simplest graph with 1 vertex
 		 * 
@@ -277,20 +313,60 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		g06 = new Graph(vmap06, ledges06);
 
 		/*
-		 * g60) prune edges further in future than ttl
-		 *
-		 *  o ---- o ---- x
+		 * g70)
 		 * 
-		 */ 
-		Map<String, Vertex> vmap07 = initialize_vmap(Arrays.asList(v3, v4, v7));
-		Map<String, List<Edge>> ledges07 = initialize_edges(vmap03);
-		ledges07.get(v3.get_id()).add(e2);
-		ledges07.get(v4.get_id()).add(e34);
+		 * cold
+		 * x -------- e1
+		 *            \
+		 * o --------- o
+		 * cnew	  e2	clast
+		 */
+
+		Map<String, Vertex> vmap07 = initialize_vmap(Arrays.asList(v1, v21, v42));
+		Map<String, List<Edge>> ledges07 = initialize_edges(vmap07);
+		ledges07.get(v1.get_id()).add(e61);
+		ledges07.get(v21.get_id()).add(e62);
 		g07 = new Graph(vmap07, ledges07);
-	
+
+		/* A somewhat more complicated example
+		 * 
+		 * vb_t2, vb_t4 should be pruned
+		 * 
+		 * va_t1   vb_t2      
+		 * o ------ x
+		 *  \
+		 *   ------------
+		 *     \   vc_t3  \ vb_t4
+		 *      --- o ---- x
+		 *          |\          vb_t5
+		 *          | --------- o 
+		 *          |           |
+		 *          |          now(t6)
+		 *          |            
+		 *           \
+		 *            ----------- o vb_t7
+		 * 
+		 * va_t1	--> c4  (h11, h12, 20.0, 30.0)
+		 * vb_t2    --> c5  (h12, h13, 40.0, 50.0) 
+		 * vc_t3	--> c51	(h12, h14, 45.0, 55.0)
+		 * vb_t4	--> c52 (h12, h13, 55.0, 58.0)
+		 * vb_t5	--> c53 (h12, h13, 75.0, 90.0)
+		 * t6 -- current time 100.0
+		 * vb_t7	--> c54 (h12, h13, 110.0, 115.0)
+		 * 
+		 */
+
+		Map<String, Vertex> vmap08 = initialize_vmap(Arrays.asList(v4, v5, v51, v52, v53, v54));
+		Map<String, List<Edge>> ledges08 = initialize_edges(vmap08);
+		ledges08.get(v4.get_id()).add(e3);   // edge e4  --> c5
+		ledges08.get(v4.get_id()).add(e32);  // edge e4  --> 51
+		ledges08.get(v4.get_id()).add(e33);  // edge e4  --> 52
+		ledges08.get(v51.get_id()).add(e42); // edge e51 --> 52
+		ledges08.get(v51.get_id()).add(e43); // edge e51 --> 53
+		ledges08.get(v51.get_id()).add(e44); // edge e51 --> 54
+		g08 = new Graph(vmap08, ledges08);   
+
 		
-		
-	
 		
 		rs01 = new RouteSearch(g01);
 		rs02 = new RouteSearch(g02);
@@ -299,5 +375,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		rs05 = new RouteSearch(g05);
 		rs06 = new RouteSearch(g06);
 		rs07 = new RouteSearch(g07);
+		rs08 = new RouteSearch(g08);
 	}
 }

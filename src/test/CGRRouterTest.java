@@ -4,8 +4,6 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +18,6 @@ import routing.EpidemicRouter;
 import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
-import routing.cgr.Path;
 import routing.cgr.RouteSearch;
 import routing.cgr.Vertex;
 
@@ -32,6 +29,16 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	public void setUp() throws Exception {
 		setRouterProto(new EpidemicRouter(ts));
 		super.setUp();
+	}
+	
+	/*
+	 * Reflection
+	 */
+	
+	private Object get_private(String fname, RouteSearch rname) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		Field edges_reflect = RouteSearch.class.getDeclaredField(fname);
+		edges_reflect.setAccessible(true);
+		return edges_reflect.get(rname);
 	}
 	
 	/*
@@ -51,7 +58,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(c3.begin(), 0.0);
 		assertEquals(c3.end(), 10.0);
 		assertEquals(c2.begin(), 100.0);
-		assertEquals(c2.end(), 101.0);
+		assertEquals(c2.end(), 110.0);
 		
 		// Assert hash creation
 		assertNotEquals(c3.hashCode(), 0);
@@ -265,6 +272,10 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
     	assertEquals(v3.get_transmission_speed(), 10);
     	assertEquals(v4.get_transmission_speed(), 10);
 
+		Map<Vertex, Double> distances_01 = (Map<Vertex, Double>)get_private("distances", rs01);
+		Map<Vertex, Double> distances_02 = (Map<Vertex, Double>)get_private("distances", rs02);
+
+    	
     	/*
 		 * g1 vertex graph
 		 */
@@ -280,14 +291,14 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
     	
     	// after the first relax, the message can be forward after v4_start == 20.0
     	// since the message has size 10 and the speed is 10, the time when v4 is ready to transmit further is 21.0
-    	assertEquals(rs01.get_distances().get(v4), 21.0);
+    	assertEquals(distances_01.get(v4), 21.0);
     	
     	// now the only node in unsettled is v4, we can relax v4 and it should find the pivot_end
     	// the pivot start is zero, so the best starting time will be 21.0, it should take 0.0 to transmit,  
     	// since it is a pivot
     	end = call_route_search_relax(rs01, v4, 10, 300);
-    	double dist = rs01.get_distances().get(v4);
-    	assertEquals(rs01.get_distances().get(v4), 21.0);
+    	double dist = distances_01.get(v4);
+    	assertEquals(distances_01.get(v4), 21.0);
     	Vertex pivot_end = create_pivot(v4.get_receiver());
     	assertNotNull(end);
     	
@@ -302,26 +313,26 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		pivot_end = create_pivot(v4.get_other_host(common_host));
 
 		// calling relax on pivot will find out vertex v3
-    	assertEquals(rs02.get_distances().get(v3), Double.POSITIVE_INFINITY);
+    	assertEquals(distances_02.get(v3), Double.POSITIVE_INFINITY);
     	end = call_route_search_relax(rs02, pivot_begin, 10, 300);
     	assertNull(end);
-    	assertEquals(rs02.get_distances().get(v3), 1.0);
-    	assertEquals(rs02.get_distances().get(v4), Double.POSITIVE_INFINITY);
-    	assertEquals(rs02.get_distances().get(pivot_end), Double.POSITIVE_INFINITY);
+    	assertEquals(distances_02.get(v3), 1.0);
+    	assertEquals(distances_02.get(v4), Double.POSITIVE_INFINITY);
+    	assertEquals(distances_02.get(pivot_end), Double.POSITIVE_INFINITY);
 
     	// the next unsettled to be called is v3 that will find p4 but not the pivot
     	end = call_route_search_relax(rs02, v3, 10, 300);
     	assertNull(end);
-    	assertEquals(rs02.get_distances().get(v3), 1.0);
-    	assertEquals(rs02.get_distances().get(v4), 21.0);
-    	assertEquals(rs02.get_distances().get(pivot_end), Double.POSITIVE_INFINITY);
+    	assertEquals(distances_02.get(v3), 1.0);
+    	assertEquals(distances_02.get(v4), 21.0);
+    	assertEquals(distances_02.get(pivot_end), Double.POSITIVE_INFINITY);
 
     	// the next unsettled to be called is v4 returning the pivot
     	end = call_route_search_relax(rs02, v4, 10, 300);
     	assertNotNull(end);
-    	assertEquals(rs02.get_distances().get(v3), 1.0);
-    	assertEquals(rs02.get_distances().get(v4), 21.0);
-    	assertEquals(rs02.get_distances().get(pivot_end), 22.0);
+    	assertEquals(distances_02.get(v3), 1.0);
+    	assertEquals(distances_02.get(v4), 21.0);
+    	assertEquals(distances_02.get(pivot_end), 22.0);
 	}
 	
 	public void test_search() {
@@ -351,33 +362,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(path.get_path_as_list().size(), 3);
 	}
 	
-//	public void test_prune() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
-//		
-//		/* 4 vertex graph. x ---- x edges should be discarded
-//		 * 	
-//		 *  v31    v41
-//		 *   x ---- x
-//		 *           \
-//		 *            o ---- o
-//		 *			 / v5    v6
-//		 *   x ---- x
-//		 *  v3      v4
-//		 *
-//		 */
-//
-//		// search starts after the end of contact v41 (45.0)
-//		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
-//		edges_reflect.setAccessible(true);
-//		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs04);
-//		assertEquals(edges.get(v3.get_id()).size(), 1);
-//		assertEquals(edges.get(v31.get_id()).size(), 1);
-//
-//		end_pivot = rs04.search(v5.get_hosts().get(0), 46.0, m05); 
-//		assertEquals(edges.get(v3.get_id()).size(), 0);
-//		assertEquals(edges.get(v31.get_id()).size(), 0);
-//
-//	}
-	
 	public void test_setting_pivot() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		/* 4 vertex graph, starting at 46.0. Pivot_start should connect only to source (v5) and pivot_end to v6
 		 * 	
@@ -392,12 +376,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 */
 
 		// search starts after the end of contact v41 (45.0)
-		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
-		edges_reflect.setAccessible(true);
-		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs04);
-
+		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)get_private("edges", rs04); 
 		end_pivot = rs04.search(v5.get_hosts().get(0), 46.0, m05); 
-
 		
 		Vertex pivot_begin = create_pivot(v5.get_hosts().get(0));
 		assertEquals(edges.get(pivot_begin.get_id()).size(), 1);
@@ -415,10 +395,10 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 *
 		 */
 		
-		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
-		edges_reflect.setAccessible(true);
-		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs05);
+		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)get_private("edges", rs05); 
 
+		
+		
 		Vertex begin_pivot = create_pivot(v3.get_hosts().get(0));
 		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03);
 		assertNotNull(end_pivot);		
@@ -432,40 +412,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	}
 	
 	
-	
-	/*
-	 * 
-	 * g70) prune visited nodes
-	 *
-	 * 		 x	
-	 * 		/
-	 * o---o
-	 * 		\
-	 * 		 o
-	 *
-	 * In order to prune already visited nodes we would need to copy the vertexes.
-	 * Instead we will verify on the fly if a visited node is on the contact
-	 *
-	 */
-//	public void test_prune_visited_node() throws ReflectiveOperationException, RuntimeException {
-//		Field msg_path = Message.class.getDeclaredField("path");
-//		msg_path.setAccessible(true);
-//		List<DTNHost> path = (List<DTNHost>)msg_path.get(m03);
-//		
-//		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
-//		edges_reflect.setAccessible(true);
-//		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs05);
-//
-//		
-//		path.add(h14);
-//		assertEquals(edges.get(v4.get_id()).size(), 2);
-//		initialize_route_search(rs05, m03, 0.0, v3.get_hosts().get(0));
-//		assertEquals(edges.get(v4.get_id()).size(), 1);
-//
-//		
-//		
-//	}
-
 	
 	/*
 	 * g51) one end, two paths
@@ -506,27 +452,69 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(path.get_path_as_list().get(3), v6);
 		assertEquals(path.get_path_as_list().get(4), v7);
 	}
+
 	
 	/*
-	 * g60) prune edges further in future than ttl
-	 *
-	 *  o ---- o ---- x
-	 * 
-	 * Wont prune edges in future. The reason is that vertices on the future will only 
-	 * be accessed on the expand phase. We rather ignore the nodes that starts after ttl()
-	 * than copy the whole vertices list
-	 * 
-	 */ 
-//	public void test_prune_future() throws ReflectiveOperationException, RuntimeException {
-//		m02.setTtl(70);
-//		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
-//		edges_reflect.setAccessible(true);
-//		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs07);
-//
-//		assertEquals(edges.get(v4.get_id()).get(0), e34);
-//		initialize_route_search(rs07, m02, 0.0, v3.get_hosts().get(0));
-//		Vertex end_pivot = create_pivot(v4.get_hosts().get(1));
-//		Edge e_pivot = new Edge(v4, end_pivot);
-//		assertEquals(edges.get(v4.get_id()).get(0), e_pivot);
-//	}
+	 * We currently prune contacts from repeated pair of nodes in the past.
+	 * Say, if vertex v1 and v2 are two vertex between the same pair of 
+	 * hosts h1 and h2 and beginning  at t1 and t2 respectively:
+	 * if t1 < t2 < now, v1_t1 can be deleted.
+	 */
+	public void test_prune() throws ReflectiveOperationException, RuntimeException {
+		
+		/* A simpler example
+		 * 
+		 * cold
+		 * x -------- e1
+		 *            \
+		 * o --------- o
+		 * cnew	  e2	clast
+		 */
+		
+		Map<String, Vertex> vertices  = (Map<String, Vertex>)get_private("vertices", rs07);
+
+		int num_vertices = vertices.values().size();
+		initialize_route_search(rs07, m08, 105.0, v1.get_hosts().get(0));
+		int new_num_vertices = vertices.values().size();
+
+		assertEquals(num_vertices + 1, new_num_vertices); // +2 pivots -1 pruned
+		
+		/* A somewhat more complicated example
+		 * 
+		 * vb_t2, vb_t4 should be pruned
+		 * 
+		 * va_t1   vb_t2      
+		 * o ------ x
+		 *  \
+		 *   ------------
+		 *     \   vc_t3  \ vb_t4
+		 *      --- o ---- x
+		 *          |\          vb_t5
+		 *          | --------- o 
+		 *          |           |
+		 *          |          now(t6)
+		 *          |            
+		 *           \
+		 *            ----------- o vb_t7
+		 * 
+		 * va_t1	--> c4  (h11, h12, 20.0, 30.0)
+		 * vb_t2    --> c5  (h12, h13, 40.0, 50.0) 
+		 * vc_t3	--> c51	(h12, h14, 45.0, 55.0)
+		 * vb_t4	--> c52 (h12, h13, 55.0, 58.0)
+		 * vb_t5	--> c53 (h12, h13, 75.0, 90.0)
+		 * t6 -- current time 100.0
+		 * vb_t7	--> c54 (h12, h13, 110.0, 115.0)
+		 * 
+		 */
+
+		vertices  = (Map<String, Vertex>)get_private("vertices", rs08);
+
+		num_vertices = vertices.values().size();
+		initialize_route_search(rs08, m10, 100.0, v51.get_hosts().get(1));
+		new_num_vertices = vertices.values().size();
+
+		assertEquals(num_vertices, new_num_vertices); // +2 pivots -2 pruned
+		
+	}
+	
 }

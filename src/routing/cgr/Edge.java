@@ -38,6 +38,8 @@ public class Edge {
 	
 
 	/**
+	 * TODO: currently we are not using this code.
+	 * Verify afterwards if we really need it.
      * necessary for the hashSet duplicate detection
      * @return has value for this edge
      */
