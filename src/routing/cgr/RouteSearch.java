@@ -1,7 +1,5 @@
 package routing.cgr;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -15,22 +13,17 @@ import core.Message;
 
 public class RouteSearch {
 
-	private Graph graph;
 	private Map<String, Vertex> vertices;
 	private Map<String, List<Edge>> edges;
 	private Map<Vertex, Vertex> predecessors;
 	private Map<Vertex, Double> distances;
 	private Set<Vertex> settled;
 	private List<Vertex> unsettled;
-	private Message message;
-	private final int EARLIER_THAN = 0;
-	private final int LATER_THAN = 1;
 	private Vertex end_pivot;
-	private Distance distance_measure;
+	private Distance<Integer, Vertex, Vertex, Double> distance_measure;
 
 	
     public RouteSearch(Graph g) {
-        graph                  	= g;
         vertices               	= g.get_vertice_map();
         edges                  	= g.get_edges();
         distances               = new HashMap<>();
@@ -75,7 +68,7 @@ public class RouteSearch {
 			distance_measure = num_hops;
 		} 
 		else if (name == "least_latency") {
-			distance_measure = distance_measure;
+			this.distance_measure = distance_measure;
 		} 
 	}
     
@@ -98,7 +91,6 @@ public class RouteSearch {
     }
 
     private void init(Message m, double now, DTNHost cur) {
-    	message = m;
     	settled.clear();
     	unsettled.clear();
     	predecessors.clear();
@@ -135,77 +127,28 @@ public class RouteSearch {
     }
 
     /**
-     * Simple immutable class that stores the hosts of a vertices
-     * as a set to be used in as key in a hashSet (for pruning)
-     */
-    private class Bigram{
-        private Set<DTNHost> hosts_set;
-        private String bid;
-        
-        public Bigram(Set<DTNHost> hset, String bid) {
-        	hosts_set = hset;
-        	this.bid = bid;
-        }
-
-        public String get_bid() {
-        	return bid;
-        }
-        
-        @Override
-        public int hashCode(){
-                final int prime = 31;
-                int result = 1;
-                result = prime * result + ((bid == null) ? 0 : bid.hashCode());
-                return result;
-        }
-
-        @Override 
-        public boolean equals(Object obj){
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            Bigram other = (Bigram) obj;
-            String otherbid = other.get_bid();
-            return (bid.equals(otherbid));
-        }
-    }
-    
-    private Bigram create_bigram(Vertex v, List<DTNHost> hosts_list) {
-		String set_bid = hosts_list.get(0).toString() + hosts_list.get(1).toString();
-		Set<DTNHost> hosts_set = new HashSet<>();
-		for (DTNHost h : hosts_list) {
-			hosts_set.add(h);
-		}
-		return new Bigram(hosts_set, set_bid);
-    }
- 
-    /**
      * Delete unusable vertices. 
      * Assumption: If two vertex have the same src/dst hosts and both begin in at some 
      * point in time in the past we can safely prune the oldest vertex and its edges.
      * @param visited hosts already visited by this message
      */
     private void prune(double now) {
-    	Map<Bigram, Vertex> v_map = new HashMap<Bigram, Vertex>();
+    	Map<String, Vertex> v_map = new HashMap<String, Vertex>();
     	List<Vertex> to_delete = new LinkedList<Vertex>();
 
     	for (Vertex v : vertices.values()) {
     		if (v.begin() > now) { // not interested in contacts to come	
     			continue;
     		}
-    		List<DTNHost> hosts_list = v.get_hosts();
-			Bigram b = create_bigram(v, hosts_list);
+    		String cpair = v.get_hosts().get(0).toString() + v.get_hosts().get(1).toString();
     		
-    		if (v_map.get(b) == null) { // see vertex for the first time
-    			v_map.put(b, v);
+    		if (v_map.get(cpair) == null) { // see vertex for the first time
+    			v_map.put(cpair, v);
     			continue;
     		}	
-    		else if (v_map.get(b).begin() < v.begin()) { // found a vertex to prune
-    			to_delete.add(v_map.get(b));
-    			v_map.put(b, v);
+    		else if (v_map.get(cpair).begin() < v.begin()) { // found a vertex to prune
+    			to_delete.add(v_map.get(cpair));
+    			v_map.put(cpair, v);
     		} else {
     			to_delete.add(v);
     		}
