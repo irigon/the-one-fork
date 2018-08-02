@@ -106,10 +106,8 @@ public class RouteSearch {
     	
     	/* Add an src and end pivot + edges to reach it */
     	double end_time = Double.POSITIVE_INFINITY;
-
+    	//TODO: probably the root/end vertex should be passed to the init function
     	Vertex rootVertex = create_pivot_and_initialize(cur, 0, end_time);
-    	List<Vertex> source_vertexes = new ArrayList<>();
-    	
     	end_pivot = create_pivot_and_initialize(m.getTo(), 0, end_time);
     	
     	for (Vertex v : vertices.values()) {
@@ -120,6 +118,8 @@ public class RouteSearch {
     			edges.get(v.get_id()).add(new Edge(v, end_pivot));
     		}
     		// connects every vertex containing src host whose contact did not finished to the pivot
+    		// TODO: fix here, there might be several contacts from this node ending after now.
+    		// we need to get the last one from now (in the past)
     		if (v.get_hosts().contains(cur) && !v.is_pivot() && v.end() > now) {
     			edges.get(rootVertex.get_id()).add(new Edge(rootVertex, v));
     		}
@@ -237,20 +237,6 @@ public class RouteSearch {
     }
    
     /**
-     * Calculate the best possible distance until the bundle reception at neighbor.
-     * neighbor_min_distance takes in account the fact that distances are started at infinity.
-     * In such case the distance to the neighbor becomes neighbor_begin + time to transmit.
-     * @param size  Message size
-     * @param cur	Current DTNHost
-     * @param neighbor	Neighbor DTNHost
-     * @return	moment when the message should arrive at neighbor through this path.
-     */
-    private double calculate_arrival_time(int size, Vertex cur, Vertex neighbor) {
-    	double neighbor_transmission_time = (double) size / neighbor.get_transmission_speed();
-    	return  Math.max(distances.get(cur), neighbor.adjusted_begin()) + neighbor_transmission_time;
-    }
-    
-    /**
      * Find neighbors of v updating the unsettling list and distances
      * @param v Vertex to expand (find neighbors)
      * @param m The distance depends on the message size and transmission speed
@@ -267,7 +253,7 @@ public class RouteSearch {
     			.collect(Collectors.toList());
     	
 		for (Vertex n : neighbors) {
-			double at = calculate_arrival_time(size, v, n);
+			double at = (double)distance_measure.apply(size, v, n);
 			if (at < distances.get(n) && at < n.end()) { 			// improved distance?
 				predecessors.replace(n, v);
 				distances.replace(n, at);
