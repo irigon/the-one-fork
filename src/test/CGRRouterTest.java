@@ -351,32 +351,32 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(path.get_path_as_list().size(), 3);
 	}
 	
-	public void test_prune() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
-		
-		/* 4 vertex graph. x ---- x edges should be discarded
-		 * 	
-		 *  v31    v41
-		 *   x ---- x
-		 *           \
-		 *            o ---- o
-		 *			 / v5    v6
-		 *   x ---- x
-		 *  v3      v4
-		 *
-		 */
-
-		// search starts after the end of contact v41 (45.0)
-		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
-		edges_reflect.setAccessible(true);
-		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs04);
-		assertEquals(edges.get(v3.get_id()).size(), 1);
-		assertEquals(edges.get(v31.get_id()).size(), 1);
-
-		end_pivot = rs04.search(v5.get_hosts().get(0), 46.0, m05); 
-		assertEquals(edges.get(v3.get_id()).size(), 0);
-		assertEquals(edges.get(v31.get_id()).size(), 0);
-
-	}
+//	public void test_prune() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+//		
+//		/* 4 vertex graph. x ---- x edges should be discarded
+//		 * 	
+//		 *  v31    v41
+//		 *   x ---- x
+//		 *           \
+//		 *            o ---- o
+//		 *			 / v5    v6
+//		 *   x ---- x
+//		 *  v3      v4
+//		 *
+//		 */
+//
+//		// search starts after the end of contact v41 (45.0)
+//		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
+//		edges_reflect.setAccessible(true);
+//		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs04);
+//		assertEquals(edges.get(v3.get_id()).size(), 1);
+//		assertEquals(edges.get(v31.get_id()).size(), 1);
+//
+//		end_pivot = rs04.search(v5.get_hosts().get(0), 46.0, m05); 
+//		assertEquals(edges.get(v3.get_id()).size(), 0);
+//		assertEquals(edges.get(v31.get_id()).size(), 0);
+//
+//	}
 	
 	public void test_setting_pivot() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		/* 4 vertex graph, starting at 46.0. Pivot_start should connect only to source (v5) and pivot_end to v6
@@ -411,7 +411,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 * o---o
 		 * 		\
 		 * 		 o
-		 * 
+		 *
+		 *
 		 */
 		
 		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
@@ -430,6 +431,42 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(edges.get(v51.get_id()).size(), 0);
 	}
 	
+	
+	
+	/*
+	 * 
+	 * g70) prune visited nodes
+	 *
+	 * 		 x	
+	 * 		/
+	 * o---o
+	 * 		\
+	 * 		 o
+	 *
+	 * In order to prune already visited nodes we would need to copy the vertexes.
+	 * Instead we will verify on the fly if a visited node is on the contact
+	 *
+	 */
+//	public void test_prune_visited_node() throws ReflectiveOperationException, RuntimeException {
+//		Field msg_path = Message.class.getDeclaredField("path");
+//		msg_path.setAccessible(true);
+//		List<DTNHost> path = (List<DTNHost>)msg_path.get(m03);
+//		
+//		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
+//		edges_reflect.setAccessible(true);
+//		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs05);
+//
+//		
+//		path.add(h14);
+//		assertEquals(edges.get(v4.get_id()).size(), 2);
+//		initialize_route_search(rs05, m03, 0.0, v3.get_hosts().get(0));
+//		assertEquals(edges.get(v4.get_id()).size(), 1);
+//
+//		
+//		
+//	}
+
+	
 	/*
 	 * g51) one end, two paths
 	 * 		 o	
@@ -440,8 +477,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	 * 
 	 */
 
-	public void test_convergence() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
-		Vertex begin_pivot = create_pivot(v3.get_hosts().get(0));
+	public void test_convergence() {
 		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m06);
 		assertNotNull(end_pivot);		
 		path = rs06.get_path(end_pivot);
@@ -470,6 +506,27 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(path.get_path_as_list().get(3), v6);
 		assertEquals(path.get_path_as_list().get(4), v7);
 	}
-
-
+	
+	/*
+	 * g60) prune edges further in future than ttl
+	 *
+	 *  o ---- o ---- x
+	 * 
+	 * Wont prune edges in future. The reason is that vertices on the future will only 
+	 * be accessed on the expand phase. We rather ignore the nodes that starts after ttl()
+	 * than copy the whole vertices list
+	 * 
+	 */ 
+//	public void test_prune_future() throws ReflectiveOperationException, RuntimeException {
+//		m02.setTtl(70);
+//		Field edges_reflect = RouteSearch.class.getDeclaredField("edges");
+//		edges_reflect.setAccessible(true);
+//		Map<String, List<Edge>> edges = (Map<String, List<Edge>>)edges_reflect.get(rs07);
+//
+//		assertEquals(edges.get(v4.get_id()).get(0), e34);
+//		initialize_route_search(rs07, m02, 0.0, v3.get_hosts().get(0));
+//		Vertex end_pivot = create_pivot(v4.get_hosts().get(1));
+//		Edge e_pivot = new Edge(v4, end_pivot);
+//		assertEquals(edges.get(v4.get_id()).get(0), e_pivot);
+//	}
 }

@@ -56,6 +56,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Edge    e31;
 	protected Edge    e32;
 	protected Edge    e33;
+	protected Edge    e34;
 	protected Edge    e4;
 	protected Edge    e41;
 	protected Edge    e5;
@@ -78,6 +79,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Graph   g04;
 	protected Graph   g05;
 	protected Graph   g06;
+	protected Graph   g07;
 	
 	protected Message m01;
 	protected Message m02;
@@ -93,6 +95,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected RouteSearch rs04;
 	protected RouteSearch rs05;
 	protected RouteSearch rs06;
+	protected RouteSearch rs07;
 	
 	protected Path path;
 	
@@ -151,6 +154,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		e31 = new Edge(v41, v5);
 		e32  = new Edge(v4, v51);
 		e33  = new Edge(v4, v52);
+		e34  = new Edge(v4, v7);
 		e4 = new Edge(v5, v6);
 		e41 = new Edge(v52, v6);
 		e5 = new Edge(v6, v7);
@@ -170,37 +174,33 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		 *  o
 		 *  
 		 */
-		
-		// create vertices, edges and graph
 		Map<String, Vertex> vmap01 = initialize_vmap(Arrays.asList(v4));
 		Map<String, List<Edge>> ledges01 = initialize_edges(vmap01);
-		
 		g01 = new Graph(vmap01 , ledges01);
 		
+
 		/*
 		 * g2) a simple graph with 2 vertexes
 		 *
 		 *	o----o
 		 */
-		
 		Map<String, Vertex> vmap02 = initialize_vmap(Arrays.asList(v3, v4));
 		Map<String, List<Edge>> ledges02 = initialize_edges(vmap02);
-		
 		ledges02.get(v3.get_id()).add(e2);
 		g02 = new Graph(vmap02, ledges02);
+		
 		
 		/*
 		 * g3) extending it to 3 nodes in line
 		 *
 		 *	o----o----o
 		 */
-		
 		Map<String, Vertex> vmap03 = initialize_vmap(Arrays.asList(v3, v4, v5));
 		Map<String, List<Edge>> ledges03 = initialize_edges(vmap03);
 		ledges03.get(v3.get_id()).add(e2);
 		ledges03.get(v4.get_id()).add(e3);
-
 		g03 = new Graph(vmap03, ledges03);
+				
 		
 		/* Multigraph with old edges 
 		 * 	
@@ -212,7 +212,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		 *   x ---- x
 		 *  v3      v4
 		 */
-
 		Map<String, Vertex> vmap04 = initialize_vmap(Arrays.asList(v3, v4, v31, v41, v5, v6));
 		Map<String, List<Edge>> ledges04 = initialize_edges(vmap04);
 		ledges04.get(v3.get_id()).add(e2);
@@ -220,7 +219,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		ledges04.get(v31.get_id()).add(e21);
 		ledges04.get(v41.get_id()).add(e31);
 		ledges04.get(v5.get_id()).add(e4);
-		
 		g04 = new Graph(vmap04, ledges04);
 
 		
@@ -232,14 +230,23 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		 * 		\
 		 * 		 o
 		 * 
+		 * 
+		 * g70) prune visited nodes
+		 *
+		 * 		 x	
+		 * 		/
+		 * o---o
+		 * 		\
+		 * 		 o
+		 * 
 		 */
 		Map<String, Vertex> vmap05 = initialize_vmap(Arrays.asList(v3, v4, v5, v51));
 		Map<String, List<Edge>> ledges05 = initialize_edges(vmap05);
 		ledges05.get(v3.get_id()).add(e2);
 		ledges05.get(v4.get_id()).add(e3);
 		ledges05.get(v4.get_id()).add(e32);
-
 		g05 = new Graph(vmap05, ledges05);
+
 
 		/*
 		 * g51) one end, two paths
@@ -250,6 +257,14 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		 * c3	\ /c6
 		 * 		 o
 		 *      c51
+		 *
+		 * g52) one end, two paths
+		 * 		 o	
+		 * 		/ \
+		 * o---o   o----o
+		 * 		\ /
+		 * 		 o
+		 * 
 		 */
 		Map<String, Vertex> vmap06 = initialize_vmap(Arrays.asList(v3, v4, v5, v52, v6, v7));
 		Map<String, List<Edge>> ledges06 = initialize_edges(vmap06);
@@ -259,19 +274,23 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		ledges06.get(v5.get_id()).add(e4);
 		ledges06.get(v52.get_id()).add(e41);
 		ledges06.get(v6.get_id()).add(e5);
-
 		g06 = new Graph(vmap06, ledges06);
 
-		
 		/*
-		 * g52) one end, two paths
-		 * 		 o	
-		 * 		/ \
-		 * o---o   o----o
-		 * 		\ /
-		 * 		 o
+		 * g60) prune edges further in future than ttl
+		 *
+		 *  o ---- o ---- x
 		 * 
-		 */
+		 */ 
+		Map<String, Vertex> vmap07 = initialize_vmap(Arrays.asList(v3, v4, v7));
+		Map<String, List<Edge>> ledges07 = initialize_edges(vmap03);
+		ledges07.get(v3.get_id()).add(e2);
+		ledges07.get(v4.get_id()).add(e34);
+		g07 = new Graph(vmap07, ledges07);
+	
+		
+		
+	
 		
 		rs01 = new RouteSearch(g01);
 		rs02 = new RouteSearch(g02);
@@ -279,5 +298,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		rs04 = new RouteSearch(g04);
 		rs05 = new RouteSearch(g05);
 		rs06 = new RouteSearch(g06);
+		rs07 = new RouteSearch(g07);
 	}
 }

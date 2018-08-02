@@ -19,12 +19,13 @@ public class RouteSearch {
 	private Map<String, List<Edge>> edges;
 	private Map<Vertex, Vertex> predecessors;
 	private Map<Vertex, Double> distances;
-	private List<Vertex> settled;
+	private Set<Vertex> settled;
 	private List<Vertex> unsettled;
 	private Message message;
 	private final int EARLIER_THAN = 0;
 	private final int LATER_THAN = 1;
 	private Vertex end_pivot;
+	private Distance distance_measure;
 
 	
     public RouteSearch(Graph g) {
@@ -34,8 +35,48 @@ public class RouteSearch {
         distances               = new HashMap<>();
         predecessors           	= new HashMap<>();
         unsettled      			= new LinkedList<>();
-        settled		        	= new LinkedList<>();
+        settled		        	= new HashSet<>();
+        distance_measure        = least_latency;
     }
+    
+    /**
+     * 
+     * Interface for distance functions.
+     * Most common are:
+     * 		least latency to the target
+     * 		minimum number of hops to the target
+     * 		minimum time span between source and target
+     *
+     * @param <A>	source distance
+     * @param <B>	destination distance
+     * @param <R>	new destination distance through this source
+     */
+    @FunctionalInterface
+	interface Distance <A, B, C, R> {
+		public R apply (A a, B b, C c);
+	}
+
+	Distance<Integer, Vertex, Vertex, Double> least_latency = (size, cur, neighbor) -> {
+		double neighbor_transmission_time = (double) size / neighbor.get_transmission_speed();
+		return Math.max(distances.get(cur), neighbor.adjusted_begin()) + neighbor_transmission_time;
+	};
+	
+	Distance<Integer, Vertex, Vertex, Double> num_hops = (size, cur, neighbor) -> {
+		return distances.get(cur) + 1.0;
+	};
+    
+	/**
+	 * Define how to calculate the distance to the next hop
+	 * @param name Methods name to calculate distance
+	 */
+	public void set_distance_algorithm(String name) {
+		if (name == "num_hops") {
+			distance_measure = num_hops;
+		} 
+		else if (name == "least_latency") {
+			distance_measure = distance_measure;
+		} 
+	}
     
     /**
      * Create the a pivot and add it to vertices.
@@ -62,16 +103,19 @@ public class RouteSearch {
     	predecessors.clear();
     	/* We can prune the graph to perform the search faster. 
     	 * There are mainly 3 possibilities:
-    	 * 	[1] Delete old edges and vertices that ends before "now" 
+    	 * 	[1] Delete Vertices (BUT the newest of them) that have the 
+    	 * same hosts in contact and ends before "now" and their edges
     	 * 	[2] Delete edges and vertices that starts after m.ttl()
-    	 * 	[2] Delete edges and vertices that use vertices already visited
+    	 * 	[3] Delete edges and vertices that use vertices already visited
+    	 * 
+    	 * We might send all unusable vertices to settled set to speedup relax phase
  
     	 *	[1] --> can be performed on the original graph
-    	 *	[2] --> must be performed on a copy and it is message dependent 
+    	 *	[2] --> must be performed on a copy and it is message dependent -- currently not being done.
     	 * */
-    	prune(cur.toString(), EARLIER_THAN, now);
-    	prune(cur.toString(), LATER_THAN, m.getTtl());
-    	prune(m.getHops());
+//    	prune(cur.toString(), EARLIER_THAN, now);
+//    	prune(cur.toString(), LATER_THAN, m.getTtl());
+    	prune(m.getHops(), cur);
     	
     	/* Add an src and end pivot + edges to reach it */
     	double end_time = Double.POSITIVE_INFINITY;
@@ -110,36 +154,54 @@ public class RouteSearch {
      * @param when	EARLIER_THAN (prune all branches that end earlier than time)
      * or OLDER_THAN (prune all branches that begin after time)
      */
-    private void prune(String curr_id, int when, double time) {
-        switch (when) {
-        	case EARLIER_THAN: 
-        		for (String id : edges.keySet()) {
-        			Set<Edge> old_edges_set = new HashSet<>(edges.get(id).stream()
-        					// if the current host is the destination of a contact that just finished, it is still
-        					// possible to use the edge from this contact
-        					.filter(edge -> edge.get_src_end() < time && edge.get_dest_id() != curr_id)
-        					.collect(Collectors.toSet()));
-        			edges.get(id).removeAll(old_edges_set);
-        			if (edges.isEmpty()) {
-        				edges.remove(id);
-        				vertices.remove(id);
-        			}
-        		}
-        		break;
-        	case LATER_THAN: 
-	        	//TODO: prune_future_branches
-	        	System.out.println("TODO: prune_future_branches");
-        		break;
-        }
-    }
+//    private void prune(String curr_id, int when, double time) {
+//        switch (when) {
+//        	case EARLIER_THAN: 
+//        		for (String id : edges.keySet()) {
+//        			Set<Edge> old_edges_set = new HashSet<>(edges.get(id).stream()
+//        					// if the current host is the destination of a contact that just finished, it is still
+//        					// possible to use the edge from this contact
+//        					.filter(edge -> edge.get_src_end() < time && edge.get_dest_id() != curr_id)
+//        					.collect(Collectors.toSet()));
+//        			edges.get(id).removeAll(old_edges_set);
+//        			if (edges.isEmpty()) {
+//        				edges.remove(id);
+//        				vertices.remove(id);
+//        			}
+//        		}
+//        		break;
+//        	case LATER_THAN: 
+//        		for (String id : edges.keySet()) {
+//        			Set<Edge> old_edges_set = new HashSet<>(edges.get(id).stream()
+//        					.filter(edge -> edge.get_dst_begin() > time)
+//        					.collect(Collectors.toSet()));
+//        			edges.get(id).removeAll(old_edges_set);
+//        			if (edges.isEmpty()) {
+//        				edges.remove(id);
+//        				vertices.remove(id);
+//        			}
+//        		}
+//        		break;
+//        }
+//    }
     
     /**
      * Delete already visited edges and vertices
      * @param visited hosts already visited by this message
      */
-    private void prune(List<DTNHost> visited) {
-    	// TODO: prune visited nodes
-    	System.out.println("TODO: prune visited nodes");
+    private void prune(List<DTNHost> visited, DTNHost cur) {
+    	//TODO: what to delete here?
+    	//		for (String id : edges.keySet()) {
+//			Set<Edge> visited = new HashSet<>(edges.get(id).stream()
+//					.filter(edge -> edge.) > time)
+//					.collect(Collectors.toSet()));
+//			edges.get(id).removeAll(old_edges_set);
+//			if (edges.isEmpty()) {
+//				edges.remove(id);
+//				vertices.remove(id);
+//			}
+//		}
+//		break;
     }
     
     /**
@@ -179,11 +241,13 @@ public class RouteSearch {
      * @param v Vertex to expand (find neighbors)
      * @param m The distance depends on the message size and transmission speed
      */
+    
     private Vertex relax(Vertex v, int size, int ttl) {
     	Vertex pivot = null;
     	List<Vertex> neighbors = edges.get(v.get_id()).stream()
     			.filter(e -> !settled.contains(e.get_dest_id()))	// filter out settled vertices
     			.filter(e -> e.get_dst_begin() < ttl)				// filter out contacts that start after ttl expiration
+    																// TODO filter out contacts with already visited nodes
     			.map(e -> vertices.get(e.get_dest_id()))
     			.filter(e -> e.current_capacity() > size)  			// filter out contacts that does not have enough capacity
     			.collect(Collectors.toList());
@@ -206,11 +270,13 @@ public class RouteSearch {
     	return pivot;
     }
     
-    public List<Vertex> construct_path(Vertex end){
-    	List<Vertex> path = new ArrayList<>();
-    	return path;
-    }
-    
+    /**
+     * Search the best path using Dijkstra algorithm
+     * @param this_host the host calculating the best path 
+     * @param now simulation time
+     * @param m message to be sent
+     * @return
+     */
     public Vertex search(DTNHost this_host, double now, Message m) {
     	init (m, now, this_host);
 
