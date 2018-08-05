@@ -177,27 +177,6 @@ public class RouteSearch {
 	}
 
 	/**
-	 * Searches through unsettled list the vertice with the least distance
-	 * 
-	 * @param m
-	 *            Message, not sure if we need. -- TODO, if we don't need take this
-	 *            out.
-	 * @return the vertice with the least distance from source
-	 */
-	private Vertex get_next_unsettled() {
-		Vertex next = null;
-		double shortest_distance = Double.POSITIVE_INFINITY;
-		for (Vertex v : unsettled) {
-			if (distances.get(v) < shortest_distance) {
-				shortest_distance = distances.get(v);
-				next = v;
-			}
-		}
-		return next;
-
-	}
-
-	/**
 	 * Find neighbors of v updating the unsettling list and distances
 	 * 
 	 * @param v
@@ -274,9 +253,9 @@ public class RouteSearch {
 		init(pivot_begin, now);
 
 		while (!unsettled.isEmpty()) {
-			next = get_next_unsettled();
+			next = unsettled.first(); // unsettled is ordered
 			if (next == null) {
-				System.out.print("cur returned null... why?");
+				System.out.print("WARNING: cur returned null!!!");
 			} else if (next.equals(pivot_end)) {
 				break;
 			}

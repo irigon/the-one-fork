@@ -394,10 +394,14 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, Exception, InvocationTargetException {
 		/*
 		 * 4 vertex graph, starting at 46.0. Pivot_start should connect only to source
-		 * (v5) and pivot_end to v6
-		 * 
-		 * v31 v41 x ---- x \ o ---- o / v5 v6 x ---- x v3 v4
-		 *
+		 * 	
+		 *  v31    v41
+		 *   x ---- x
+		 *           \
+		 *            o ---- o
+		 *			 / v5    v6
+		 *   x ---- x
+		 *  v3      v4
 		 */
 
 		// search starts after the end of contact v41 (45.0)
@@ -448,13 +452,23 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	}
 
 	/*
+	 * 
 	 * g51) one end, two paths
+	 * 		 c5
+	 *       o	
+	 * 	  c4/ \
+	 * o---o   o
+	 * c3	\ /c6
+	 * 		 o
+	 *      c51
 	 * 
-	 * v5 o v3 v4/ \ v6 o-----o o \ / o v52
+	 * c3 = (h10, h11, 0.0, 10.0) 
+	 * c4 = (h11, h12, 20.0, 30.0) 
+	 * c5 = (h12, h13, 40.0, 50.0) 
+	 * c52 = (h12, h13, 55.0, 58.0) 
+	 * c6 = (h13, h14, 60.0, 70.0) 
+	 * m06 = v3.get(0) --> v6.get(1)
 	 * 
-	 * c3 = (h10, h11, 0.0, 10.0) c4 = (h11, h12, 20.0, 30.0) c5 = (h12, h13, 40.0,
-	 * 50.0) c52 = (h12, h13, 55.0, 58.0) c6 = (h13, h14, 60.0, 70.0) m06 =
-	 * v3.get(0) --> v6.get(1)
 	 */
 
 	public void test_convergence() {
@@ -492,11 +506,16 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		/*
 		 * A simpler example
 		 * 
-		 * cold x -------- e1 \ o --------- o cnew e2 clast
+		 * cold
+		 * x -------- e1
+		 *            \
+		 * o --------- o
+		 * cnew	  e2	clast
 		 * 
 		 *
-		 * cold v1 (h11, h10, 0.0, 10.0); cnew v21 (h11, h10, 100.0, 110.0) clast v42
-		 * (h11, h12, 120.0, 130.0)
+		 * cold v1 (h11, h10, 0.0, 10.0); 
+		 * cnew v21 (h11, h10, 100.0, 110.0) 
+		 * clast v42 (h11, h12, 120.0, 130.0)
 		 * 
 		 */
 
@@ -511,18 +530,29 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 * A somewhat more complicated example
 		 * 
 		 * vb_t2, vb_t4 should be pruned
+         *
+		 * va_t1   vb_t2      
+		 * o ------ x
+		 *  \
+		 *   ------------
+		 *     \   vc_t3  \ vb_t4
+		 *      --- o ---- x
+		 *          |\          vb_t5
+		 *          | --------- o 
+		 *          |           |
+		 *          |          now(t6)
+		 *          |            
+		 *           \
+		 *            ----------- o vb_t7
 		 * 
-		 * va_t1 vb_t2 o ------ x \ ------------ \ vc_t3 \ vb_t4 --- o ---- x |\ vb_t5 |
-		 * --------- o | | | now(t6) | \ ----------- o vb_t7
-		 * 
-		 * va_t1 --> c4 (h11, h12, 20.0, 30.0) 
-		 * vb_t2 --> c5 (h12, h13, 40.0, 50.0) 
-		 * vc_t3 --> c51 (h12, h14, 45.0, 55.0) 
-		 * vb_t4 --> c52 (h12, h13, 55.0, 58.0) 
-		 * vb_t5 --> c53 (h12, h13, 75.0, 90.0) 
-		 * t6 -- current time 100.0 
-		 * vb_t7 --> c54 (h12, h13, 110.0, 115.0)
-		 * 
+		 * va_t1	--> c4  (h11, h12, 20.0, 30.0)
+		 * vb_t2    --> c5  (h12, h13, 40.0, 50.0) 
+		 * vc_t3	--> c51	(h12, h14, 45.0, 55.0)
+		 * vb_t4	--> c52 (h12, h13, 55.0, 58.0)
+		 * vb_t5	--> c53 (h12, h13, 75.0, 90.0)
+		 * t6 -- current time 100.0
+		 * vb_t7	--> c54 (h12, h13, 110.0, 115.0)
+         * 
 		 */
 
 		List<Double> times = Arrays.asList(10.0, 19.0, 21.0, 29.0, 47.0, 54.0, 80.0, 100.0, 120.0);
