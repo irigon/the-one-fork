@@ -370,7 +370,12 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		path = rs01.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v4);
 		assertEquals(path.get_path_as_list().size(), 1);
-		// 2 vertex graph
+		/*
+		 *  2 vertex graph
+		 *  
+		 *   v3   v4
+		 *   o----o
+		 */
 		end_pivot = rs02.search(v3.get_hosts().get(0), 0.0, m02);
 		path = rs02.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
@@ -510,10 +515,13 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 * va_t1 vb_t2 o ------ x \ ------------ \ vc_t3 \ vb_t4 --- o ---- x |\ vb_t5 |
 		 * --------- o | | | now(t6) | \ ----------- o vb_t7
 		 * 
-		 * va_t1 --> c4 (h11, h12, 20.0, 30.0) vb_t2 --> c5 (h12, h13, 40.0, 50.0) vc_t3
-		 * --> c51 (h12, h14, 45.0, 55.0) vb_t4 --> c52 (h12, h13, 55.0, 58.0) vb_t5 -->
-		 * c53 (h12, h13, 75.0, 90.0) t6 -- current time 100.0 vb_t7 --> c54 (h12, h13,
-		 * 110.0, 115.0)
+		 * va_t1 --> c4 (h11, h12, 20.0, 30.0) 
+		 * vb_t2 --> c5 (h12, h13, 40.0, 50.0) 
+		 * vc_t3 --> c51 (h12, h14, 45.0, 55.0) 
+		 * vb_t4 --> c52 (h12, h13, 55.0, 58.0) 
+		 * vb_t5 --> c53 (h12, h13, 75.0, 90.0) 
+		 * t6 -- current time 100.0 
+		 * vb_t7 --> c54 (h12, h13, 110.0, 115.0)
 		 * 
 		 */
 

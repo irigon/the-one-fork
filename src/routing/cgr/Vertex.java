@@ -82,6 +82,16 @@ public class Vertex {
 		return contact.adjusted_begin();
 	}
 	
+	public double compare_ordered(Vertex other) {
+		double ret = 0.0;
+		if (other.adjusted_begin() != adjusted_begin()) {
+			ret = Double.compare(adjusted_begin(), other.adjusted_begin());
+		} else { // same begin, verify the ids
+			ret = (double)vid.compareTo(other.get_id());
+		}
+		return ret;
+	}
+	
 	public DTNHost get_common_host(Vertex x) {
 		List<DTNHost> x_hosts = x.get_hosts();
 		for (DTNHost l : contact.get_hosts()) {
