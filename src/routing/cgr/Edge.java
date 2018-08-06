@@ -36,6 +36,10 @@ public class Edge {
 		return destination.end();
 	}
 	
+	public Vertex get_dst_vertex() {
+		return destination;
+	}
+	
 
 	/**
 	 * TODO: currently we are not using this code.

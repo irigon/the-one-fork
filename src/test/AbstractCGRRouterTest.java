@@ -3,8 +3,10 @@ package test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import core.DTNHost;
 import core.Message;
@@ -23,7 +25,24 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected DTNHost h13;
 	protected DTNHost h14;
 	protected DTNHost h15;
-	
+	protected DTNHost h16;
+	protected DTNHost h17;
+	protected DTNHost h18;
+	protected DTNHost h19;
+	protected DTNHost h20;
+
+	protected DTNHost hx6;
+	protected DTNHost hx7;
+	protected DTNHost hx8;
+	protected DTNHost hx9;
+	protected DTNHost hx10;
+	protected DTNHost hp1;
+	protected DTNHost hp2;
+	protected DTNHost hp3;
+	protected DTNHost hp4;
+	protected DTNHost hp5;
+	protected DTNHost hp6;
+
 	protected Contact c1;
 	protected Contact c2;
 	protected Contact c3;
@@ -38,6 +57,29 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Contact c54;
 	protected Contact c6;
 	protected Contact c7;
+	
+	protected Contact c_x10_p4_100_110;
+	protected Contact c_x10_p5_307_320;
+	protected Contact c_x10_p4_149_160;
+	protected Contact c_x10_p5_200_210;
+	protected Contact c_p4_x6_130_150;
+	protected Contact c_p5_x7_325_340;
+	protected Contact c_p4_x6_190_200;
+	protected Contact c_p5_x7_220_240;
+	protected Contact c_x6_p3_140_150;
+	protected Contact c_x7_p2_370_380;
+	protected Contact c_x6_p1_220_240;
+	protected Contact c_p3_x7_250_280;
+	protected Contact c_p3_x7_160_170;
+	protected Contact c_p2_x9_390_400;
+	protected Contact c_p1_x8_250_260;
+	protected Contact c_x6_p3_250_280;
+	protected Contact c_p5_x7_160_171;
+	protected Contact c_p4_x6_250_280;
+	protected Contact c_x7_p2_180_190;
+	protected Contact c_x6_p1_300_320;
+	protected Contact c_p2_x9_200_210;
+	protected Contact c_p1_x8_330_340;
 	
 	protected Vertex  v1;
 	protected Vertex  v2;
@@ -56,6 +98,30 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Vertex  v7;
 	protected Vertex  start_pivot;
 	protected Vertex  end_pivot;
+	protected Vertex v_x10_p4_100_110;
+	protected Vertex v_x10_p5_307_320;
+	protected Vertex v_x10_p4_149_160;
+	protected Vertex v_x10_p5_200_210;
+	protected Vertex v_p4_x6_130_150;
+	protected Vertex v_p5_x7_325_340;
+	protected Vertex v_p4_x6_190_200;
+	protected Vertex v_p5_x7_220_240;
+	protected Vertex v_x6_p3_140_150;
+	protected Vertex v_x7_p2_370_380;
+	protected Vertex v_x6_p1_220_240;
+	protected Vertex v_p3_x7_250_280;
+	protected Vertex v_p3_x7_160_170;
+	protected Vertex v_p2_x9_390_400;
+	protected Vertex v_p1_x8_250_260;
+	protected Vertex v_x6_p3_250_280;
+	protected Vertex v_p5_x7_160_171;
+	protected Vertex v_p4_x6_250_280;
+	protected Vertex v_x7_p2_180_190;
+	protected Vertex v_x6_p1_300_320;
+	protected Vertex v_p2_x9_200_210;
+	protected Vertex v_p1_x8_330_340;
+	
+	protected List<Vertex> vertex_list09;
 	
 	protected Edge    e1;
 	protected Edge    e2;
@@ -73,6 +139,9 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Edge    e5;
 	protected Edge    e61;
 	protected Edge    e62;
+	
+	protected Map<String, List<Edge>> edge_map01;
+
 	
 	protected Map<String, Vertex> vmap01;
 	protected Map<String, Vertex> vmap02;
@@ -94,6 +163,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Graph   g06;
 	protected Graph   g07;
 	protected Graph   g08;
+	protected Graph   g09;
 	
 	protected Message m01;
 	protected Message m02;
@@ -114,6 +184,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected RouteSearch rs06;
 	protected RouteSearch rs07;
 	protected RouteSearch rs08;
+	protected RouteSearch rs09;
 	
 	protected Path path;
 	
@@ -131,6 +202,36 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		}
 		return vmap;
 	}	
+	
+// if two vertex have one host in common and v1.start() < v2.end()
+	private boolean connects(Vertex v1, Vertex v2) {
+		Set<DTNHost> h1set = new HashSet<DTNHost>(v1.get_hosts());
+		Set<DTNHost> h2set = new HashSet<DTNHost>(v2.get_hosts());
+		h1set.retainAll(h2set);
+		if (h1set.size() != 1) {
+			return false;
+		}
+		
+		return v1.adjusted_begin() < v2.end();
+		
+	}
+	
+	private Map<String, List<Edge>> connect_vertices(Map<String, List<Edge>> edges, List<Vertex> vertices){
+		for (Vertex v1: vertices) {
+			for (Vertex v2: vertices) {
+				if (connects(v1, v2)) {
+//					String edge_id = "edge_" + v1.get_id().substring(7) + v2.get_id().substring(6);
+					String vid = v1.get_id();
+					if (edges.get(vid) == null) {
+						edges.put(vid, new ArrayList<Edge>());
+					}
+					edges.get(vid).add(new Edge(v1, v2));
+				}
+			}
+		}
+		return edges;
+	}
+	
 	@Override
 	public void setUp() throws Exception {
 		super.setUp();
@@ -141,39 +242,78 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		h13 = utils.createHost(c0, "h13");
 		h14 = utils.createHost(c0, "h14");
 		h15 = utils.createHost(c0, "h15");
+		h16 = utils.createHost(c0, "h16");
+		h17 = utils.createHost(c0, "h17");
+		h18 = utils.createHost(c0, "h18");
+		h19 = utils.createHost(c0, "h19");
+		
+		hx6  = utils.createHost(c0, "hx6");
+		hx7  = utils.createHost(c0, "hx7");
+		hx8  = utils.createHost(c0, "hx8");
+		hx9  = utils.createHost(c0, "hx9");
+		hx10 = utils.createHost(c0, "hx10");
+		hp1  = utils.createHost(c0, "hp1");
+		hp2  = utils.createHost(c0, "hp2");
+		hp3  = utils.createHost(c0, "hp3");
+		hp4  = utils.createHost(c0, "hp4");
+		hp5  = utils.createHost(c0, "hp5");
+		hp6  = utils.createHost(c0, "hp6");
+
+		
 		
 		c1  = new Contact(h11, h10, 0.0, 10.0);
 		c2  = new Contact(h11, h10, 100.0, 110.0);
 		c3  = new Contact(h10, h11, 0.0, 10.0);
-		c31  = new Contact(h10, h11, 15.0, 25.0);
+		c31 = new Contact(h10, h11, 15.0, 25.0);
 		c4  = new Contact(h11, h12, 20.0, 30.0);
 		c41 = new Contact(h12, h13, 35.0, 45.0);
-		c42  = new Contact(h11, h12, 120.0, 130.0);
+		c42 = new Contact(h11, h12, 120.0, 130.0);
 		c5  = new Contact(h12, h13, 40.0, 50.0);
-		c51  = new Contact(h12, h14, 45.0, 55.0);
-		c52  = new Contact(h12, h13, 55.0, 58.0);
-		c53  = new Contact(h12, h13, 75.0, 90.0);
-		c54  = new Contact(h12, h13, 110.0, 115.0);
+		c51 = new Contact(h12, h14, 45.0, 55.0);
+		c52 = new Contact(h12, h13, 55.0, 58.0);
+		c53 = new Contact(h12, h13, 75.0, 90.0);
+		c54 = new Contact(h12, h13, 110.0, 115.0);
 		c6  = new Contact(h13, h14, 60.0, 70.0);
-		c7  = new Contact(h14, h15, 80.0, 90.0);
+		c7  = new Contact(h14, h15, 80.0, 90.0);		
+		c_x10_p4_100_110 = new Contact(hx10, hp4, 100.0, 110.0);
+		c_x10_p5_307_320 = new Contact(hx10, hp5, 307.0, 320.0);
+		c_x10_p4_149_160 = new Contact(hx10, hp4, 149.0, 160.0);
+		c_x10_p5_200_210 = new Contact(hx10, hp5, 200.0, 210.0);
+		c_p4_x6_130_150  = new Contact(hp4,  hx6, 130.0, 150.0);
+		c_p5_x7_325_340  = new Contact(hp5,  hx7, 325.0, 340.0);
+		c_p4_x6_190_200  = new Contact(hp4,  hx6, 190.0, 200.0);
+		c_p5_x7_220_240  = new Contact(hp5,  hx7, 220.0, 240.0);
+		c_x6_p3_140_150  = new Contact(hx6,  hp3, 140.0, 150.0);
+		c_x7_p2_370_380  = new Contact(hx7,  hp2, 370.0, 380.0);
+		c_x6_p1_220_240  = new Contact(hx6,  hp1, 220.0, 240.0);
+		c_p3_x7_250_280  = new Contact(hp3,  hx7, 250.0, 280.0);
+		c_p3_x7_160_170  = new Contact(hp3,  hx7, 160.0, 170.0);
+		c_p2_x9_390_400  = new Contact(hp2,  hx9, 390.0, 400.0);
+		c_p1_x8_250_260  = new Contact(hp1,  hx8, 250.0, 260.0);
+		c_x6_p3_250_280  = new Contact(hx6,  hp3, 250.0, 280.0);
+		c_p5_x7_160_171  = new Contact(hp5,  hx7, 160.0, 171.0);
+		c_p4_x6_250_280  = new Contact(hp4,  hx6, 250.0, 280.0);
+		c_x7_p2_180_190  = new Contact(hx7,  hp2, 180.0, 190.0);
+		c_x6_p1_300_320  = new Contact(hx6,  hp1, 300.0, 320.0);
+		c_p2_x9_200_210  = new Contact(hp2,  hx9, 200.0, 210.0);
+		c_p1_x8_330_340  = new Contact(hp1,  hx8, 330.0, 340.0);
 
-		v1  = new Vertex("vertex_1", c1, false);
-		v2  = new Vertex("pivot_c1", c1, true);
-		v21  = new Vertex("vertex_21", c2, false);
-		v3  = new Vertex("vertex_3", c3, false);
+		v1  = new Vertex("vertex_1",  c1,  false);
+		v2  = new Vertex("pivot_c1",  c1,  true);
+		v21 = new Vertex("vertex_21", c2,  false);
+		v3  = new Vertex("vertex_3",  c3,  false);
 		v31 = new Vertex("vertex_31", c31, false);
-		v4  = new Vertex("vertex_4", c4, false);
+		v4  = new Vertex("vertex_4",  c4,  false);
 		v41 = new Vertex("vertex_41", c41, false);
 		v42 = new Vertex("vertex_42", c42, false);
-		v5  = new Vertex("vertex_5", c5, false);
+		v5  = new Vertex("vertex_5",  c5,  false);
 		v51 = new Vertex("vertex_51", c51, false);
 		v52 = new Vertex("vertex_52", c52, false);
 		v53 = new Vertex("vertex_53", c53, false);
 		v54 = new Vertex("vertex_54", c54, false);
-		v6  = new Vertex("vertex_6", c6, false);
-		v7  = new Vertex("vertex_7", c7, false);
+		v6  = new Vertex("vertex_6",  c6,  false);
+		v7  = new Vertex("vertex_7",  c7,  false);
 		
-
 		e1  = new Edge(v3, v2);
 		e2  = new Edge(v3, v4);
 		e21 = new Edge(v31, v41);
@@ -190,7 +330,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		e5  = new Edge(v6, v7);
 		e61 = new Edge(v1, v42);
 		e62 = new Edge(v21, v42);
-
 		
 		// Message from:h11 to:h12, id:"TestMessage", size: 10
 		m01 = new Message(v4.get_hosts().get(0), v4.get_hosts().get(1),  "TestMessage", 10);
@@ -367,6 +506,56 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		g08 = new Graph(vmap08, ledges08);   
 
 		
+		/*
+		 * 
+		 * p1x8 o           o p2x9
+		 *      |           |
+		 * x6p1 o           o x7p2
+		 *      |  x6p3     |
+		 * p4x6 o---o---o---o p5x7
+		 *       \    p3x7 /
+		 *        \       /
+		 *   x10p4 o     o x6p5
+		 *          \   /	
+		 *           \ / 
+		 *            o
+		 *      	  pi
+		 * 		 * 
+		 */
+		vertex_list09 = new ArrayList<>();
+		vertex_list09.add(new Vertex("vertex_x10_p4_100_110", c_x10_p4_100_110, false));
+		vertex_list09.add(new Vertex("vertex_x10_p5_307_320", c_x10_p5_307_320, false));
+		vertex_list09.add(new Vertex("vertex_x10_p4_149_160", c_x10_p4_149_160, false));
+		vertex_list09.add(new Vertex("vertex_x10_p5_200_210", c_x10_p5_200_210, false));
+		vertex_list09.add(new Vertex("vertex_p4_x6_130_150", c_p4_x6_130_150, false));
+		vertex_list09.add(new Vertex("vertex_p5_x7_325_340", c_p5_x7_325_340, false));
+		vertex_list09.add(new Vertex("vertex_p4_x6_190_200", c_p4_x6_190_200, false));
+		vertex_list09.add(new Vertex("vertex_p5_x7_220_240", c_p5_x7_220_240, false));
+		vertex_list09.add(new Vertex("vertex_x6_p3_140_150", c_x6_p3_140_150, false));
+		vertex_list09.add(new Vertex("vertex_x7_p2_370_380", c_x7_p2_370_380, false));
+		vertex_list09.add(new Vertex("vertex_x6_p1_220_240", c_x6_p1_220_240, false));
+		vertex_list09.add(new Vertex("vertex_p3_x7_250_280", c_p3_x7_250_280, false));
+		vertex_list09.add(new Vertex("vertex_p3_x7_160_170", c_p3_x7_160_170, false));
+		vertex_list09.add(new Vertex("vertex_p2_x9_390_300", c_p2_x9_390_400, false));
+		vertex_list09.add(new Vertex("vertex_p1_x8_250_260", c_p1_x8_250_260, false));
+		vertex_list09.add(new Vertex("vertex_x6_p3_250_280", c_x6_p3_250_280, false));
+		vertex_list09.add(new Vertex("vertex_p5_x7_160_171", c_p5_x7_160_171, false));
+		vertex_list09.add(new Vertex("vertex_p4_x6_250_280", c_p4_x6_250_280, false));
+		vertex_list09.add(new Vertex("vertex_x7_p2_180_190", c_x7_p2_180_190, false));
+		vertex_list09.add(new Vertex("vertex_x6_p1_300_320", c_x6_p1_300_320, false));
+		vertex_list09.add(new Vertex("vertex_p2_x9_200_210", c_p2_x9_200_210, false));
+		vertex_list09.add(new Vertex("vertex_p1_x8_330_340", c_p1_x8_330_340, false)); 
+		
+		
+		Map<String, Vertex> vmap09 = initialize_vmap(vertex_list09);
+		Map<String, List<Edge>> edge_map09 = initialize_edges(vmap09);
+
+		edge_map09 = connect_vertices(edge_map09, vertex_list09);
+		g09 = new Graph(vmap09, edge_map09);   
+
+		
+
+		
 		
 		rs01 = new RouteSearch(g01);
 		rs02 = new RouteSearch(g02);
@@ -376,5 +565,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		rs06 = new RouteSearch(g06);
 		rs07 = new RouteSearch(g07);
 		rs08 = new RouteSearch(g08);
+		rs09 = new RouteSearch(g09);
 	}
 }

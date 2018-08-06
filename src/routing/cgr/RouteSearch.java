@@ -1,5 +1,6 @@
 package routing.cgr;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 
 import core.DTNHost;
 import core.Message;
+import jdk.internal.util.xml.impl.Pair;
 
 public class RouteSearch {
 
@@ -96,24 +98,29 @@ public class RouteSearch {
 	 *            direction of the edge)
 	 * @return The pivot vertice
 	 */
-	private Vertex create_pivot_and_initialize(List<Vertex> v_to_connect, DTNHost h, double start_time, double end_time,
+	private List<Object> create_pivot_and_initialize(List<Vertex> v_to_connect, DTNHost h, double start_time, double end_time,
 			boolean start) {
+		List<Object> pivot_obj_list = new LinkedList<>();
+
 		Contact c = new Contact(h, h, start_time, end_time);
 		Vertex pivot = new Vertex(c.get_id(), c, true);
 		String name = c.get_id();
 		vertices.put(name, pivot);
 		pivot.set_receiver(h);
 		edges.put(pivot.get_id(), new LinkedList<>());
+		pivot_obj_list.add(pivot);
 
 		for (Vertex v : v_to_connect) {
 			if (start) {
 				edges.get(pivot.get_id()).add(new Edge(pivot, v));
 			} else {
-				edges.get(v.get_id()).add(new Edge(v, pivot));
+				Edge to_pivot = new Edge(v, pivot);
+				edges.get(v.get_id()).add(to_pivot);
+				pivot_obj_list.add(to_pivot);
 			}
 		}
 
-		return pivot;
+		return pivot_obj_list;
 	}
 
 	/**
@@ -128,6 +135,7 @@ public class RouteSearch {
 		settled.clear();
 		unsettled.clear();
 		predecessors.clear();
+		distances.clear();
 
 		for (Vertex v : vertices.values()) {
 			distances.put(v, Double.POSITIVE_INFINITY);
@@ -164,7 +172,8 @@ public class RouteSearch {
 		List<Vertex> to_delete = new LinkedList<Vertex>();
 
 		for (Vertex v : vertices.values()) {
-			if (v.end() < now) {
+			// pivots on vertices map is garbage from old runs.
+			if (v.end() < now || v.is_pivot()) { 
 				to_delete.add(v);
 			}
 		}
@@ -188,13 +197,10 @@ public class RouteSearch {
 	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
 		int ttl = m.getTtl();
-		List<Vertex> neighbors = edges.get(v.get_id()).stream().filter(e -> e.get_dst_begin() < ttl) // filter out
-																										// contacts that
-																										// start after
-																										// ttl
-																										// expiration
-				.map(e -> vertices.get(e.get_dest_id())).filter(e -> !settled.contains(e)) // filter out already settled
-																							// vertices
+		List<Vertex> neighbors = edges.get(v.get_id()).stream()
+				.filter(e -> e.get_dst_begin() < ttl) // filter out expired
+				.map(e -> vertices.get(e.get_dest_id()))
+				.filter(e -> !settled.contains(e))    // filter out already settled
 				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
 				.filter(e -> e.current_capacity() > size) // filter out contacts without enough capacity
 				.collect(Collectors.toList());
@@ -345,14 +351,25 @@ public class RouteSearch {
 		final boolean END_PIVOT = false;
 		List<Vertex> coi_src = pivot_candidates.get("coi_src");
 		List<Vertex> coi_dst = pivot_candidates.get("coi_dst");
-		Vertex pivot_begin = create_pivot_and_initialize(coi_src, this_host, 0.0, Double.POSITIVE_INFINITY, START_PIVOT);
-		Vertex pivot_end = create_pivot_and_initialize(coi_dst, m.getTo(), 0.0, Double.POSITIVE_INFINITY, END_PIVOT);
+		
+		/* Creating pivots and edges for/from them */
+		List<Object> p_structure_begin;
+		List<Object> p_structure_end;
+		p_structure_begin = create_pivot_and_initialize(coi_src, this_host, 0.0, Double.POSITIVE_INFINITY, START_PIVOT);
+		p_structure_end = create_pivot_and_initialize(coi_dst, m.getTo(), 0.0, Double.POSITIVE_INFINITY, END_PIVOT);
 
-		Vertex pivot = null;
+		Vertex pivot_ini = (Vertex)p_structure_begin.get(0);
+		Vertex pivot_fin = (Vertex)p_structure_end.get(0);
 		List<DTNHost> blacklist = m.getHops();
 		blacklist.remove(this_host);
-		pivot = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
-		return pivot;
+		pivot_fin = run_dijkstra(pivot_ini, pivot_fin, now, m, blacklist);
+		
+		//cleanup edges from vertices to end_pivots
+		for (Edge e: (List<Edge>)(Object)p_structure_end.subList(1, p_structure_end.size())) {
+			edges.get(e.get_src_id()).remove(e);
+		}
+		
+		return pivot_fin;
 	}
 
 	/**
