@@ -68,12 +68,12 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	}
 
 	private List<Object> create_and_init_pivot(RouteSearch rs, List<Vertex> v_to_connect, DTNHost h,
-			double start_time, double end_time, boolean start) throws NoSuchMethodException, SecurityException,
+			boolean start) throws NoSuchMethodException, SecurityException,
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-		Class[] argClasses = { List.class, DTNHost.class, double.class, double.class, boolean.class };
+		Class[] argClasses = { List.class, DTNHost.class, boolean.class };
 		Method method = RouteSearch.class.getDeclaredMethod("create_pivot_and_initialize", argClasses);
 		method.setAccessible(true);
-		final Object[] parameters = { v_to_connect, h, start_time, end_time, start };
+		final Object[] parameters = { v_to_connect, h, start };
 
 		List<Object> pivot_structure = (List<Object>)method.invoke(rs, parameters);
 		return pivot_structure;
@@ -290,7 +290,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		
 		DTNHost src = v4.get_hosts().get(0);
 		
-		List<Object> pivot_structure = create_and_init_pivot(rs01, Arrays.asList(v4), src, 0.0, Double.POSITIVE_INFINITY, true);
+		List<Object> pivot_structure = create_and_init_pivot(rs01, Arrays.asList(v4), src, true);
 		Vertex pivot_begin = (Vertex)pivot_structure.get(0);
 		initialize_route_search(rs01, pivot_begin, 0.0);
 		Vertex end;
@@ -315,7 +315,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(distances_01.get(v4), 21.0);
 		//Vertex pivot_end = create_pivot(v4.get_receiver());
 		DTNHost hend = v4.get_hosts().get(1);
-		pivot_structure = create_and_init_pivot(rs01, Arrays.asList(v4), hend, 0.0, Double.POSITIVE_INFINITY, false);
+		pivot_structure = create_and_init_pivot(rs01, Arrays.asList(v4), hend, false);
 		Vertex pivot_end = (Vertex)pivot_structure.get(0); 
 
 		assertNotNull(pivot_end);
@@ -328,12 +328,12 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		// double end_time) {
 		// initialize_route_search(rs02, m02, 0.0, v3.get_hosts().get(0));
 		src = v3.get_hosts().get(0);
-		pivot_structure = create_and_init_pivot(rs02, Arrays.asList(v3), src, 0.0, Double.POSITIVE_INFINITY, true);
+		pivot_structure = create_and_init_pivot(rs02, Arrays.asList(v3), src, true);
 		pivot_begin = (Vertex)pivot_structure.get(0);
 		initialize_route_search(rs02, pivot_begin, 0.0);
 		DTNHost common_host = v4.get_common_host(v3);
 		hend = v4.get_other_host(common_host);
-		pivot_structure = create_and_init_pivot(rs02, Arrays.asList(v4), hend, 0.0, Double.POSITIVE_INFINITY, false);
+		pivot_structure = create_and_init_pivot(rs02, Arrays.asList(v4), hend, false);
 		pivot_end = (Vertex)pivot_structure.get(0);
 
 		// calling relax on pivot will find out vertex v3
@@ -435,7 +435,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		Map<String, List<Edge>> edges = (Map<String, List<Edge>>) get_private("edges", rs04);
 
 		DTNHost src = v5.get_hosts().get(0);
-		List<Object> pivot_structure = create_and_init_pivot(rs04, Arrays.asList(v5), src, 0.0, Double.POSITIVE_INFINITY, true);
+		List<Object> pivot_structure = create_and_init_pivot(rs04, Arrays.asList(v5), src, true);
 		Vertex pivot_begin = (Vertex) pivot_structure.get(0);
 
 		assertEquals(edges.get(pivot_begin.get_id()).size(), 1);
@@ -465,7 +465,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		Map<String, List<Edge>> edges = (Map<String, List<Edge>>) get_private("edges", rs05);
 
 		DTNHost src = v3.get_hosts().get(0);
-		List<Object> pivot_structure = create_and_init_pivot(rs05, Arrays.asList(v3), src, 0.0, Double.POSITIVE_INFINITY, true);
+		List<Object> pivot_structure = create_and_init_pivot(rs05, Arrays.asList(v3), src, true);
 
 		Vertex begin_pivot = (Vertex)pivot_structure.get(0);
 		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03);

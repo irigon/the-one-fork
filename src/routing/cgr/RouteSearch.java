@@ -98,11 +98,10 @@ public class RouteSearch {
 	 *            direction of the edge)
 	 * @return The pivot vertice
 	 */
-	private List<Object> create_pivot_and_initialize(List<Vertex> v_to_connect, DTNHost h, double start_time, double end_time,
-			boolean start) {
+	private List<Object> create_pivot_and_initialize(List<Vertex> v_to_connect, DTNHost h, boolean start) {
 		List<Object> pivot_obj_list = new LinkedList<>();
 
-		Contact c = new Contact(h, h, start_time, end_time);
+		Contact c = new Contact(h, h, 0.0, Double.POSITIVE_INFINITY);
 		Vertex pivot = new Vertex(c.get_id(), c, true);
 		String name = c.get_id();
 		vertices.put(name, pivot);
@@ -122,6 +121,8 @@ public class RouteSearch {
 
 		return pivot_obj_list;
 	}
+	
+	
 
 	/**
 	 * Initialize dijkstra
@@ -205,15 +206,6 @@ public class RouteSearch {
 				.filter(e -> e.current_capacity() > size) // filter out contacts without enough capacity
 				.collect(Collectors.toList());
 
-		/*
-		 * For each neighbor: 1) calculate the distance to it if the distance do not
-		 * improve continue otherwise: if the distance improved update predecessors,
-		 * distance, number of hops set sender host as neighbors receiver if the
-		 * distance is the same if we arrive it with less hops through n update
-		 * predecessor and number of hops set sender host as neighbors receiver add
-		 * neighbor to unsettled if it is not already
-		 * 
-		 */
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
 			if (at < n.end()) {
@@ -347,29 +339,32 @@ public class RouteSearch {
 	 * @return
 	 */
 	private Vertex search_ll(Map<String, List<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host) {
-		final boolean START_PIVOT = true;
-		final boolean END_PIVOT = false;
 		List<Vertex> coi_src = pivot_candidates.get("coi_src");
 		List<Vertex> coi_dst = pivot_candidates.get("coi_dst");
-		
-		/* Creating pivots and edges for/from them */
-		List<Object> p_structure_begin;
-		List<Object> p_structure_end;
-		p_structure_begin = create_pivot_and_initialize(coi_src, this_host, 0.0, Double.POSITIVE_INFINITY, START_PIVOT);
-		p_structure_end = create_pivot_and_initialize(coi_dst, m.getTo(), 0.0, Double.POSITIVE_INFINITY, END_PIVOT);
 
-		Vertex pivot_ini = (Vertex)p_structure_begin.get(0);
-		Vertex pivot_fin = (Vertex)p_structure_end.get(0);
+		/* Creating pivots and edges for/from them 
+		 * p_begin / p_end is a list of Objects
+		 * the first object is the pivot vertex and the rest of the list 
+		 * are edges added to this pivot.
+		 * We save these edges for cleaning after search, avoiding go through the 
+		 * whole edge list.
+		 * */
+		List<Object> p_begin = create_pivot_and_initialize(coi_src, this_host, true);
+		List<Object> p_end = create_pivot_and_initialize(coi_dst, m.getTo(), false);			
+		
 		List<DTNHost> blacklist = m.getHops();
 		blacklist.remove(this_host);
-		pivot_fin = run_dijkstra(pivot_ini, pivot_fin, now, m, blacklist);
+		Vertex pivot_begin = (Vertex)p_begin.get(0);
+		Vertex pivot_end = (Vertex)p_end.get(0);
+		
+		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
 		
 		//cleanup edges from vertices to end_pivots
-		for (Edge e: (List<Edge>)(Object)p_structure_end.subList(1, p_structure_end.size())) {
+		for (Edge e: (List<Edge>)(Object)p_end.subList(1, p_end.size())) {
 			edges.get(e.get_src_id()).remove(e);
 		}
 		
-		return pivot_fin;
+		return pivot_end;
 	}
 
 	/**
