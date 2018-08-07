@@ -199,11 +199,11 @@ public class RouteSearch {
 		int size = m.getSize();
 		int ttl = m.getTtl();
 		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-				.filter(e -> e.get_dst_begin() < ttl) // filter out expired
+				.filter(e -> e.get_dst_begin() < ttl)      // filter out far in the future vertices
 				.map(e -> vertices.get(e.get_dest_id()))
-				.filter(e -> !settled.contains(e))    // filter out already settled
+				.filter(e -> !settled.contains(e))         // filter out already settled vertices
 				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-				.filter(e -> e.current_capacity() > size) // filter out contacts without enough capacity
+				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
 				.collect(Collectors.toList());
 
 		for (Vertex n : neighbors) {

@@ -27,7 +27,9 @@ public class Path {
 			path.add(v);
 		}
 		Collections.reverse(path);
-		path.remove(0);
+		if (path.size() > 0) { // if there is a pivot_begin, remove it.
+			path.remove(0);
+		}
 		return path;
 	}
 	
