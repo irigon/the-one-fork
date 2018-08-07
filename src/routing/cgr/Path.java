@@ -17,12 +17,12 @@ public class Path {
 		}
 		path.clear();
 	}
-	public List<Vertex> construct(Vertex pivot_end, Map<Vertex, Vertex> predecessors){
+	public List<Vertex> construct(Vertex last, Map<Vertex, Vertex> predecessors){
 		this.init();
-		if (pivot_end == null) {
+		if (!last.is_pivot()) { // on success the last pivot is returned
 			return path;
 		}
-		Vertex v = pivot_end;
+		Vertex v = last;
 		while ((v = predecessors.get(v)) != null) {
 			path.add(v);
 		}

@@ -252,9 +252,7 @@ public class RouteSearch {
 
 		while (!unsettled.isEmpty()) {
 			next = unsettled.first(); // unsettled is ordered
-			if (next == null) {
-				System.out.print("WARNING: cur returned null!!!");
-			} else if (next.equals(pivot_end)) {
+			if (next.equals(pivot_end)) {
 				break;
 			}
 			relax(next, m, blacklist);

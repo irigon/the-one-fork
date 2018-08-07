@@ -101,7 +101,7 @@ public class Graph {
 					for (Edge e: edges.get(v.get_id())) {
 						edges.get(new_v.get_id()).add(e);
 					}
-					// copy the edges that arrive at the original node to the new one
+					// copy the edges that arrived at the original node to the new created one
 					List<Edge> to_add = new LinkedList<>();
 					for (Map.Entry <String, List<Edge>> entry : edges.entrySet()) {
 						String key = null;

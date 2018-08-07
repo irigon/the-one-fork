@@ -613,8 +613,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		g10 = new Graph(vmap10, ledges10);   
 
 		
-		
-		
 		rs01 = new RouteSearch(g01);
 		rs02 = new RouteSearch(g02);
 		rs03 = new RouteSearch(g03);

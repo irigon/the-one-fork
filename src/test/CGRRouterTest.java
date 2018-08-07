@@ -639,17 +639,37 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		
 		Message m = new Message(h10, h12,  "TestMessage", 40);
 	
-		end_pivot = rs10.search(h10, 120.0, m);
-		assertNotNull(end_pivot);
+		Vertex result;
+		
+		result = rs10.search(h10, 120.0, m);
+		assertTrue(result.is_pivot());
 		assertEquals(vertices.size(), 8); // v421, v61, v42, v8, v9, v71, pivot_begin, pivot_end
 		assertEquals(edges.size(), 8); 
 		assertEquals(edges.get(v421.get_id()).size(), 1);
+		assertEquals(vertices.get(v42.get_id()).adjusted_begin(), 120.0);
+		assertEquals(vertices.get(v42.get_id()).end(), 130.0);
 		Path p = new Path();
-		p.construct(end_pivot,  predecessors);
+		p.construct(result,  predecessors);
 		g10.consume_path(p, m, 10);
-		assertEquals(vertices.size(), 9); // v421, v61, v42, v8, v9, v71, pivot_begin, pivot_end
+		assertEquals(vertices.get(v421.get_id()).adjusted_begin(), 124.0);
+		assertEquals(vertices.get(v42.get_id()).adjusted_begin(), 120.0);
+		assertEquals(vertices.get(v42.get_id()).end(), 124.0);
+		assertEquals(vertices.size(), 9); // + vertex_42_128.0_130.0
 		assertEquals(edges.size(), 9); 
 		assertEquals(edges.get(v421.get_id()).size(), 2);
+
+		result = rs10.search(h10, 120.0, m);
+		assertFalse(result.is_pivot());
+		assertEquals(p.construct(result, predecessors).size(), 0);	// empty path, list with size 0
+		
+		// for a 1 sec message there should still be enough resource
+		m = new Message(h10, h12,  "TestMessage", 10);
+		result = rs10.search(h10, 120.0, m);
+		assertTrue(result.is_pivot());
+		assertEquals(vertices.size(), 9); 
+		assertEquals(edges.size(), 9); 
+		assertEquals(edges.get(v421.get_id()).size(), 2);
+		assertEquals(p.construct(result, predecessors).size(), 2);	// 2 vertex path: v421 --> v42
 	}
 
 	
