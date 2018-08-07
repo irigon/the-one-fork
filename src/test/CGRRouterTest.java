@@ -20,6 +20,7 @@ import routing.EpidemicRouter;
 import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
+import routing.cgr.Path;
 import routing.cgr.RouteSearch;
 import routing.cgr.Vertex;
 
@@ -404,17 +405,22 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		/* x10 -> p4  time = 105.0 , 
 		 * path: x10_p4, p4_x6, x6_p3, p3_x7, p5_x7, x7_p2, p2_x9 time@last_contact 280 
 		 */
+		
 		Message m = new Message(hx10, hx9,  "TestMessage", 10);
 		end_pivot = rs09.search(hx10, 105.0, m);
 		assertEquals(distances.get(end_pivot), 202.0); // p2_x9 has distance 281.0, pivot has p2_x9 +1
 
+		m = new Message(hx10, hx8,  "TestMessage", 10);
+		end_pivot = rs09.search(hx10, 150.0, m);
+		assertEquals(distances.get(end_pivot), 252.0); 
+
+		end_pivot = rs09.search(hx10, 200.0, m);
+		assertEquals(distances.get(end_pivot), 332.0); 
+
+		m = new Message(hx10, hx9,  "TestMessage", 10);
 		end_pivot = rs09.search(hx10, 205.0, m);
 		assertEquals(distances.get(end_pivot), 392.0); 
 		
-		m = new Message(hx10, hx8,  "TestMessage", 10);
-		end_pivot = rs09.search(hx10, 150.0, m);
-		assertEquals(distances.get(end_pivot), 332.0); 
-
 	}
 
 	public void test_setting_pivot()
@@ -605,10 +611,81 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 			assertEquals(new_num_vertices, (int) graphsize.get(it.nextIndex()));
 			it.next();
 		}
+	}
 
+	
+	/*
+	 * Sending a message from one host to another in vertex 41 and breaking the contact in two 
+     *
+	 * c42, c421:  start = 120.0, end = 130.0
+	 * 
+	 *  	 
+     * v41
+     * o----             o v8
+     * v421  \   v42    /
+     * o -------- o ----
+     * v21   /          \
+     * o-----            o v9
+     * 
+     * v61               v71
+     * o -------------- o 
+     * 
+     */
+	
+	public void test_consume_path_00() throws Exception, SecurityException, IllegalArgumentException, IllegalAccessException {
+		Map<String, Vertex> vertices = (Map<String, Vertex>) get_private("vertices", rs10);
+		Map<Vertex, Vertex> predecessors = (Map<Vertex, Vertex>) get_private("predecessors", rs10);
+		Map<String, List<Edge>> edges = (Map<String, List<Edge>>) get_private("edges", rs10);
+		
+		Message m = new Message(h10, h12,  "TestMessage", 40);
+	
+		end_pivot = rs10.search(h10, 120.0, m);
+		assertNotNull(end_pivot);
+		assertEquals(vertices.size(), 8); // v421, v61, v42, v8, v9, v71, pivot_begin, pivot_end
+		assertEquals(edges.size(), 8); 
+		assertEquals(edges.get(v421.get_id()).size(), 1);
+		Path p = new Path();
+		p.construct(end_pivot,  predecessors);
+		g10.consume_path(p, m, 10);
+		assertEquals(vertices.size(), 9); // v421, v61, v42, v8, v9, v71, pivot_begin, pivot_end
+		assertEquals(edges.size(), 9); 
+		assertEquals(edges.get(v421.get_id()).size(), 2);
+	}
+
+	
+	
+	/*
+	 * 
+	 * p1x8 o           o p2x9
+	 *      |           |
+	 * x6p1 o           o x7p2
+	 *      |  x6p3     |
+	 * p4x6 o---o---o---o p5x7
+	 *       \    p3x7 /
+	 *        \       /
+	 *   x10p4 o     o x10p5
+	 *          \   /	
+	 *           \ / 
+	 *            o
+	 *      	  pi
+	 * 
+	 * Send messages down to a path and verify that the contact_begin moved
+	 * Keeps sending message until another path must be chosen
+	 * Go on until no path is available
+	 * 
+	 */
+	
+	public void test_consume_path_01() throws Exception, SecurityException, IllegalArgumentException, IllegalAccessException {
+		Map<Vertex, Double> distances = (Map<Vertex, Double>) get_private("distances", rs09);
+		Map<Vertex, Vertex> predecessors = (Map<Vertex, Vertex>) get_private("predecessors", rs09);
+		Map<String, Vertex> vertices = (Map<String, Vertex>) get_private("vertices", rs09);
+		Message m = new Message(hx10, hx9,  "TestMessage", 50);
+		end_pivot = rs09.search(hx10, 104.0, m);
+		assertEquals(distances.get(end_pivot), 210.0); 
+		
+		Path p = new Path();
+		p.construct(end_pivot,  predecessors);
+		g09.consume_path(p, m, 10);
 	}
 	
-	
-	
-
 }

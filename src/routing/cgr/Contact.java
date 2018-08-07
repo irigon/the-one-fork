@@ -113,6 +113,14 @@ public class Contact {
 		return adjusted_begin;
 	}
 
+	public void set_adjusted_begin(double new_begin) {
+		this.adjusted_begin = new_begin;
+	}
+
+	public void set_end(double new_end) {
+		this.end = new_end;
+	}
+	
 	public double end() {
 		return end;
 	}

@@ -26,10 +26,9 @@ public class Path {
 		while ((v = predecessors.get(v)) != null) {
 			path.add(v);
 		}
-		//List<Vertex> reversed = path.subList(0, path.size()-1);
 		Collections.reverse(path);
-
-		return path.subList(1, path.size());
+		path.remove(0);
+		return path;
 	}
 	
 	public List<Vertex> get_path_as_list(){

@@ -20,12 +20,22 @@ public class Vertex {
 		receiver = null;
 	}
 	
-	public Vertex(Vertex vertex) {
-		vid = vertex.vid;
-		contact = vertex.contact;
-		is_pivot = vertex.is_pivot;
-		sender = vertex.sender;
-		receiver = vertex.receiver;
+	public Vertex(Vertex v) {
+		vid = v.vid;
+		contact = v.contact;
+		is_pivot = v.is_pivot;
+		sender = v.sender;
+		receiver = v.receiver;
+	}
+	
+	public Vertex(Vertex v, double start, double end) {
+		DTNHost a = v.get_hosts().get(0);
+		DTNHost b = v.get_hosts().get(1);
+		contact = new Contact(a, b, start, end);
+		vid = v.get_id() +  "_" + start + "_" + end;
+		is_pivot = v.is_pivot();
+		sender = v.sender;
+		receiver = v.receiver;
 	}
 	
 	public String get_id() {
@@ -82,16 +92,6 @@ public class Vertex {
 		return contact.adjusted_begin();
 	}
 	
-	public double compare_ordered(Vertex other) {
-		double ret = 0.0;
-		if (other.adjusted_begin() != adjusted_begin()) {
-			ret = Double.compare(adjusted_begin(), other.adjusted_begin());
-		} else { // same begin, verify the ids
-			ret = (double)vid.compareTo(other.get_id());
-		}
-		return ret;
-	}
-	
 	public DTNHost get_common_host(Vertex x) {
 		List<DTNHost> x_hosts = x.get_hosts();
 		for (DTNHost l : contact.get_hosts()) {
@@ -104,6 +104,14 @@ public class Vertex {
 	
 	public DTNHost get_other_host(DTNHost x) {
 		return contact.get_other_host(x);
+	}
+	
+	public void set_adjusted_begin(double new_begin) {
+		this.contact.set_adjusted_begin(new_begin);
+	}
+	
+	public void set_end(double new_end) {
+		this.contact.set_end(new_end);
 	}
 	
 	@Override
