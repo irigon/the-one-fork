@@ -15,3 +15,10 @@ doc/package-list
 .project
 /target/
 .settings/org.eclipse.*
+
+# Simulation Contact plans
+*data/contact_plans/*
+
+# Eclipse files
+*.metadata/*
+
