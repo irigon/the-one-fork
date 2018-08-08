@@ -20,6 +20,7 @@ public class Contact {
 	private double adjusted_begin;
 	private String cid;
 	private int transmission_speed;
+	private String interface_type;
 	private int hash;
 	
 	public Contact (DTNHost a, DTNHost b, double contactStart, double contactEnd) {
@@ -51,6 +52,7 @@ public class Contact {
 		transmission_speed = contact.transmission_speed;
 		hash = contact.hash;
 	}
+	
 	
 	/**
 	 * Find out the transmission speed between host x and y in this contact
@@ -94,6 +96,10 @@ public class Contact {
 		return cid;
 	}
 	
+	public String generate_id() {
+		return host_a + "_" + host_b + "_" + adjusted_begin + "_" + end;
+	}
+	
 	public DTNHost get_other_host(DTNHost x) {
 		if (x == host_a) {
 			return host_b;
@@ -120,6 +126,10 @@ public class Contact {
 	public void set_end(double new_end) {
 		this.end = new_end;
 	}
+	
+//	public void set_interface_type(String name) {
+//		this.interface_type = name;
+//	}
 	
 	public double end() {
 		return end;

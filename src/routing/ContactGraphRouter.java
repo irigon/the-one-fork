@@ -8,6 +8,8 @@ import core.Connection;
 import core.DTNHost;
 import core.NetworkInterface;
 import core.Settings;
+import core.SimClock;
+import core.SimScenario;
 import routing.cgr.ContactPlanHandler;
 
 /**
@@ -18,6 +20,8 @@ public class ContactGraphRouter extends ActiveRouter {
 	
 	private DTNHost this_host;
 	private ContactPlanHandler cph;
+	private boolean setup;
+	private boolean create_cplan;
 
 	/**
 	 * Constructor. Creates a new message router based on the settings in
@@ -27,6 +31,7 @@ public class ContactGraphRouter extends ActiveRouter {
 	public ContactGraphRouter(Settings s) {
 		super(s);
 		this_host = getHost();
+		setup = false;
 	}
 
 	/**
@@ -36,6 +41,7 @@ public class ContactGraphRouter extends ActiveRouter {
 	protected ContactGraphRouter(ContactGraphRouter r) {
 		super(r);
 		this_host = r.this_host;
+		setup = false;
 	}
 
 	
@@ -48,6 +54,23 @@ public class ContactGraphRouter extends ActiveRouter {
 	@Override
 	public void update() {
 		super.update();
+		
+		if (!setup) { 	// verify if we need a new contact plan
+			if (ContactPlanHandler.get().has_contact_plan()) {
+				create_cplan = false;	
+				// TODO: read the vertices, create edges, construct graph()
+			} else {
+				create_cplan = true;
+			}
+			setup = true;
+		} else if (create_cplan) {	// run simulation creating contact plan
+			if (SimClock.getIntTime() >= SimScenario.getInstance().getEndTime() - 1) {
+				ContactPlanHandler.get().finish_contactplan(getHost());
+				ContactPlanHandler.get().save_contacts(getHost());
+			}
+		} else {	// contact plan available, run CGR
+			
+		}
 //		if (isTransferring() || !canStartTransfer()) {
 //			return; // transferring, don't try other connections yet
 //		}
@@ -67,24 +90,39 @@ public class ContactGraphRouter extends ActiveRouter {
 		return new ContactGraphRouter(this);
 	}
 	
-	private DTNHost get_conn_peer(Connection con) {
+	
+	/**
+	 * Find the other host connected to this one
+	 * 
+	 * Calling getOtherInterface with null as input, returns the "to" interface.
+	 * Calling getOtherInterface with "to" as input, returns the "from" interface.
+	 * Finding out the interface "i" that do not belong to this host, the peer 
+	 * host is the i.getHost();
+	 *
+	 * @param con Connection
+	 * @return The peer host
+	 */
+	private NetworkInterface get_peer_iface(Connection con) {
 		NetworkInterface iface = con.getOtherInterface(null);
 		if (getHost().getInterfaces().contains(iface)) {
 			iface = con.getOtherInterface(iface);
 		}
-		return iface.getHost();
+		return iface;
 	}
 	
 	@Override
 	public void changedConnection(Connection con) {
 		super.changedConnection(con);
+
+		/*
+		 * Save infos about the interface for serialization later on
+		 * */
+		NetworkInterface peer_iface = get_peer_iface(con);
 		
 		if (con.isUp()) { // a contact start
-			cph.get().contactStarted(get_conn_peer(con), getHost());
+			cph.get().set_contact_start_time(getHost(), peer_iface.getHost());
 		} else {
-			cph.get().contactEnded(get_conn_peer(con), getHost());
+			cph.get().set_contact_end_time(getHost(), peer_iface.getHost());
 		}
-		
 	}
-
 }
