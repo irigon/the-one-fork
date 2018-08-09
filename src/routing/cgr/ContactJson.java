@@ -25,14 +25,18 @@ public class ContactJson {
     private double start;
     private double end;
     
+    private int transmission_speed;
+    
     ContactJson(Contact c, int scenarioHash) {
-		host_a = c.get_hosts().get(0).toString();
-		host_b = c.get_hosts().get(1).toString();
+		host_a = c.get_hosts().getKey().toString();
+		host_b = c.get_hosts().getValue().toString();
 
 		scenario_hash = scenarioHash;
 
 		start = c.begin();
 		end = c.end();
+		
+		transmission_speed = c.get_transmission_speed();
 	}
 
     public String toJson() {
@@ -55,8 +59,9 @@ public class ContactJson {
 			}
 		}
 		assert(a != null && b != null);
-		 
-		return new Contact(a, b, start, end);
+		c = new Contact(a, b, start, end);
+		c.set_transmission_speed(transmission_speed);
+		return c;
 	}
 	
 	public int scenario_hash() {

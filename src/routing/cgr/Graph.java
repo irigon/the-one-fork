@@ -1,11 +1,9 @@
 package routing.cgr;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import core.Message;
 
@@ -90,7 +88,8 @@ public class Graph {
 		
 		for (Vertex v : path_as_list) {
 			comm_start = Math.max(comm_start, v.adjusted_begin()); // time when transmission takes place
-			comm_ends = comm_start + (double)msize/v.get_transmission_speed(); 
+			// TODO: iri move the round function to another place, together with a contains for tuple
+			comm_ends = ContactPlanHandler.round(comm_start + (double)msize/v.get_transmission_speed(), 2); 
 			original_end = v.end();
 			if (comm_start > v.adjusted_begin()) { // split contact
 				v.set_end(comm_start);	// reduce original
@@ -107,6 +106,7 @@ public class Graph {
 						String key = null;
 						for (Edge e: entry.getValue()) {
 							if (e.get_dst_vertex() == v) { 
+								// TODO: iri understand why this is happening
 								key = entry.getKey();
 								to_add.add(new Edge(e.get_src_vertex(), new_v));
 							}

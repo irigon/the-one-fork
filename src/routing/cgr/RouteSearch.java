@@ -1,5 +1,6 @@
 package routing.cgr;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 import core.DTNHost;
 import core.Message;
 import jdk.internal.util.xml.impl.Pair;
+import util.Tuple;
 
 public class RouteSearch {
 
@@ -198,14 +200,29 @@ public class RouteSearch {
 	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
 		int ttl = m.getTtl();
-		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-				.filter(e -> e.get_dst_begin() < ttl)      // filter out far in the future vertices
-				.map(e -> vertices.get(e.get_dest_id()))
-				.filter(e -> !settled.contains(e))         // filter out already settled vertices
-				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
-				.collect(Collectors.toList());
+//		List<Vertex> neighbors = edges.get(v.get_id()).stream()
+//				.filter(e -> e.get_dst_begin() < ttl)      // filter out far in the future vertices
+//				.map(e -> vertices.get(e.get_dest_id()))
+//				.filter(e -> !settled.contains(e))         // filter out already settled vertices
+//				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
+//				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
+//				.collect(Collectors.toList());
 
+		List<Vertex> neighbors = new ArrayList<>();
+		Vertex v_dst;
+		for (Edge e : edges.get(v.get_id())) {
+			if (!(e.get_dst_begin() < ttl)) continue;
+			v_dst = vertices.get(e.get_dest_id());
+			if (v_dst == null) {
+				System.out.println("What the hack");
+			}
+			Tuple<DTNHost, DTNHost> t_v = v_dst.get_hosts();
+			if (settled.contains(v_dst)) continue;
+			if (blacklist.contains(t_v.getKey()) || blacklist.contains(t_v.getValue())) continue;
+			if (!(v_dst.current_capacity() > size)) continue;
+			neighbors.add(v_dst);
+		}
+		
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
 			if (at < n.end()) {
@@ -310,12 +327,13 @@ public class RouteSearch {
 			if (c.is_pivot()) {
 				continue;
 			}
+			Tuple<DTNHost, DTNHost> ht = c.get_hosts();
 			// contacts including current host (used for pivot_begin) with enough capacity
-			if (c.get_hosts().contains(h) && c.current_capacity() > m.getSize()) {
+			if ((ht.getKey().equals(h) || ht.getValue().equals(h))  && c.current_capacity() > m.getSize()) {
 				orderedAdd(c, candidates.get("coi_src"));
 				// contacts including destination host (used for pivot end)
 			}
-			if (c.get_hosts().contains(m.getTo()) && c.current_capacity() > m.getSize()) {
+			if ((ht.getKey().equals(m.getTo()) || ht.getValue().equals(m.getTo())) && c.current_capacity() > m.getSize()) {
 				orderedAdd(c, candidates.get("coi_dst"));
 			}
 		}

@@ -3,6 +3,7 @@ package routing.cgr;
 import java.util.List;
 
 import core.DTNHost;
+import util.Tuple;
 
 public class Vertex {
 	
@@ -29,8 +30,8 @@ public class Vertex {
 	}
 	
 	public Vertex(Vertex v, double start, double end) {
-		DTNHost a = v.get_hosts().get(0);
-		DTNHost b = v.get_hosts().get(1);
+		DTNHost a = (DTNHost) (v.get_hosts().getKey());
+		DTNHost b = (DTNHost) (v.get_hosts().getValue());
 		contact = new Contact(a, b, start, end);
 		vid = v.get_id() +  "_" + start + "_" + end;
 		is_pivot = v.is_pivot();
@@ -68,7 +69,7 @@ public class Vertex {
 		return is_pivot;
 	}
 	
-	public List<DTNHost> get_hosts(){
+	public Tuple get_hosts(){
 		return contact.get_hosts();
 	}
 	
@@ -93,11 +94,13 @@ public class Vertex {
 	}
 	
 	public DTNHost get_common_host(Vertex x) {
-		List<DTNHost> x_hosts = x.get_hosts();
-		for (DTNHost l : contact.get_hosts()) {
-			if (x_hosts.contains(l)) {
-				return l;
-			}
+		Tuple<DTNHost, DTNHost> xh = x.get_hosts();
+		Tuple<DTNHost, DTNHost> ch = contact.get_hosts();
+		if (xh.getKey().equals(ch.getKey()) || xh.getKey().equals(ch.getValue())){
+			return xh.getKey();
+		}
+		if (xh.getValue().equals(ch.getKey()) || xh.getValue().equals(ch.getValue())){
+			return xh.getValue();
 		}
 		return null;
 	}
@@ -116,7 +119,7 @@ public class Vertex {
 	
 	@Override
 	public String toString() {
-		return this.get_id() + " [" + this.get_hosts().get(0) + ", " + this.get_hosts().get(1) + "] ";
+		return this.get_id() + " [" + this.get_hosts().getKey() + ", " + this.get_hosts().getValue() + "] ";
 	}
 	
     @Override

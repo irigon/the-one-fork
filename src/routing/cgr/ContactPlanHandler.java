@@ -25,6 +25,7 @@ import com.google.gson.reflect.TypeToken;
 import core.DTNHost;
 import core.SimClock;
 import core.SimScenario;
+import util.Tuple;
 
 public class ContactPlanHandler {
 
@@ -98,7 +99,8 @@ public class ContactPlanHandler {
     public void finish_contactplan(DTNHost h) {
     	List<Contact> clist = new ArrayList(contact_map.values());
     	for (Contact c : clist) {
-    		set_contact_end_time(c.get_hosts().get(0), c.get_hosts().get(1));
+    		Tuple<DTNHost, DTNHost> pair = c.get_hosts();
+    		set_contact_end_time(pair.getKey(), pair.getValue());
     	}
     }
     
@@ -191,14 +193,12 @@ public class ContactPlanHandler {
      * @param v_hashmap The vertices hashmap
      * @return
      */
-    public Map<String, List<Edge>> edges_from_vertices(Map<String, List<Vertex>> v_hashmap){
+    public Map<String, List<Edge>> edges_from_vertices(Map<String, Vertex> v_hashmap){
     	Map<String, List<Edge>> edges = new HashMap<>();
     	Set<Vertex> v_set = new HashSet<>();
-    	for (List<Vertex> v_list : v_hashmap.values()) {
-    		for (Vertex v : v_list) {
-    			v_set.add(v);
-    		}
-    	}
+		for (Vertex v : v_hashmap.values()) {
+			v_set.add(v);
+		}
     	
 		for (Vertex v1 : v_set) {
 			for (Vertex v2 : v_set) {
@@ -215,6 +215,16 @@ public class ContactPlanHandler {
     }
 
     /**
+     * Create the graph from disk
+     * @return	Contact Graph
+     */
+    public Graph load_graph() {
+    	Map<String, Vertex> vertices = load_vertices_from_file();
+    	Map<String, List<Edge>> edges = edges_from_vertices(vertices);
+    	return new Graph(vertices, edges);
+    }
+    
+    /**
      * Save all contacts from this hosts that are still not saved
      * @param h Host to be saved
      */
@@ -222,7 +232,7 @@ public class ContactPlanHandler {
     	List<String> json_list = new LinkedList<>();
     	ContactJson cj;
     	for (Contact c : contacts_ready.values()) {
-    		if (c.get_hosts().contains(h)) {
+    		if (c.get_hosts().getKey().equals(h) || c.get_hosts().getValue().equals(h)) {
     			cj = new ContactJson(c, getScenarioHash());
     			json_list.add(cj.toJson());
     		}
@@ -245,7 +255,7 @@ public class ContactPlanHandler {
 	/*
 	 * from: https://stackoverflow.com/questions/2808535/round-a-double-to-2-decimal-places
 	 */
-	private static double round (double value, int places) {
+	static double round (double value, int places) {
 		if (places < 0) throw new IllegalArgumentException();
 		BigDecimal bd = new BigDecimal(value);
 		bd = bd.setScale(places,  RoundingMode.HALF_UP);
@@ -280,5 +290,6 @@ public class ContactPlanHandler {
         }
         return scenario_hash;
     }
+
     
 }

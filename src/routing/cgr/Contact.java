@@ -8,6 +8,7 @@ import java.util.List;
 
 import core.DTNHost;
 import core.NetworkInterface;
+import util.Tuple;
 
 /*
  * A contact between two hosts: host_a and host_b
@@ -66,11 +67,14 @@ public class Contact {
 	 * Goes through every interface and gets the first pair of interfaces of the 
 	 * same type (compatible) that have a range wide enough to start a communication
 	 * 
+	 * WARNING: this function will just return the right value if this function is called
+	 * when both nodes in contact at the time when the method is called (on the fly)
+	 * 
 	 * @param x DTNHost partner
 	 * @param y DTNHost partner
 	 * @return the transmission speed of this contact, 0 if no appropriate interface was found
 	 */
-	private int calculate_transmission_speed(DTNHost x, DTNHost y) {
+	public int calculate_transmission_speed(DTNHost x, DTNHost y) {
 		List<NetworkInterface> lna = x.getInterfaces();
 		List<NetworkInterface> lnb = y.getInterfaces();
 		
@@ -79,7 +83,7 @@ public class Contact {
 		for (NetworkInterface nai : lna) {
 			double x_radio_range = nai.getTransmitRange();
 			for (NetworkInterface nbi : lnb) {
-				if (nbi.getInterfaceType() != nai.getInterfaceType()) {
+				if (!nbi.getInterfaceType().equals(nai.getInterfaceType())) {
 					continue;
 				}
 				double y_radio_range = nbi.getTransmitRange();
@@ -93,6 +97,10 @@ public class Contact {
 	
 	public int get_transmission_speed() {
 		return transmission_speed;
+	}
+	
+	public void set_transmission_speed(int ts) {
+		transmission_speed = ts;
 	}
 	
 	public double get_current_capacity() {
@@ -127,8 +135,8 @@ public class Contact {
 		return host_a;
 	}
 	
-	public List<DTNHost> get_hosts(){
-		return Arrays.asList(host_a, host_b);
+	public Tuple get_hosts(){
+		return new Tuple(host_a, host_b);
 	}
 		
 	public double begin() {
