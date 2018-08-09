@@ -104,8 +104,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(c3, c1);
 
 		// Verify cid creation
-		assertEquals(c3.get_id(), "cid_h10_h11_0_0");
-		assertEquals(c2.get_id(), "cid_h10_h11_100_0");
+		assertEquals(c3.get_id(), "h10_h11_0.0_10.0");
+		assertEquals(c2.get_id(), "h10_h11_100.0_110.0");
 		assertEquals(c3.begin(), 0.0);
 		assertEquals(c3.end(), 10.0);
 		assertEquals(c2.begin(), 100.0);

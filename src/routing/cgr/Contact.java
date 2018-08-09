@@ -1,6 +1,9 @@
 package routing.cgr;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import core.DTNHost;
@@ -24,20 +27,13 @@ public class Contact {
 	private int hash;
 	
 	public Contact (DTNHost a, DTNHost b, double contactStart, double contactEnd) {
-		/* Order the hosts alphabetically */
-		if (a.compareTo(b) < 0){
-			host_a = a;
-			host_b = b;
-		} else {
-			host_a = b;
-			host_b = a;
-		}
-		
-		cid = "cid_" + host_a + "_" + host_b + "_" + (int)contactStart + "_" + 0;
-		
+		List<DTNHost> ordered = order(a,b);
+		host_a = ordered.get(0);
+		host_b = ordered.get(1);
 		begin = contactStart;
 		adjusted_begin = begin;
 		end = contactEnd;
+		cid = contact_id();
 		transmission_speed = calculate_transmission_speed(a, b);
 		hash = 0;
 	}
@@ -52,8 +48,19 @@ public class Contact {
 		transmission_speed = contact.transmission_speed;
 		hash = contact.hash;
 	}
-	
-	
+
+	/**
+	 * Order a pair of contacts alphabetically by name
+	 * @param a DTNHost a
+	 * @param b DTNHost b
+	 * @return a list {a,b} ordered alphabetically by name (currently using .toString())
+	 */
+	private List<DTNHost> order(DTNHost a, DTNHost b){
+		List<DTNHost> hs = new ArrayList<DTNHost>(Arrays.asList(a, b));
+		Collections.sort(hs, Comparator.comparing(DTNHost::toString));
+		return hs;
+	}
+
 	/**
 	 * Find out the transmission speed between host x and y in this contact
 	 * Goes through every interface and gets the first pair of interfaces of the 
@@ -96,8 +103,21 @@ public class Contact {
 		return cid;
 	}
 	
-	public String generate_id() {
-		return host_a + "_" + host_b + "_" + adjusted_begin + "_" + end;
+	/**
+	 * Generates an id for this contact
+	 * <p>
+	 * We use adjusted begin instead of begin, so that if the contact is updated
+	 * and a new contact is generated from it (for example on overlapping contacts)
+	 * the new generated will have a different id from the original one.
+	 * 
+	 * @return Generated id
+	 */
+	public String contact_id() {
+		return pair_id() + "_" + adjusted_begin + "_" + end;
+	}
+	
+	public String pair_id() {
+		return host_a + "_" + host_b;
 	}
 	
 	public DTNHost get_other_host(DTNHost x) {
@@ -127,14 +147,9 @@ public class Contact {
 		this.end = new_end;
 	}
 	
-//	public void set_interface_type(String name) {
-//		this.interface_type = name;
-//	}
-	
 	public double end() {
 		return end;
 	}
-
 	
     @Override
     public int hashCode() {

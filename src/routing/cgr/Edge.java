@@ -43,7 +43,6 @@ public class Edge {
 	public Vertex get_src_vertex() {
 		return source;
 	}
-	
 
 	/**
 	 * TODO: currently we are not using this code.

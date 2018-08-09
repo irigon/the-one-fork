@@ -44,51 +44,49 @@ public class ContactPlanHandler {
 			cpl = new ContactPlanHandler();
 			cpl.contact_map = new HashMap<>();
 			cpl.contacts_ready = new HashMap<>();
-			create_contact_plan_dir();
 			CPLAN_DIR = new File("").getAbsolutePath() + CONTACT_PLAN_D;
+			create_contact_plan_dir();
 		}
 		return cpl;
 	}
 
-	private List<DTNHost> order(DTNHost a, DTNHost b){
-		List<DTNHost> hs = new ArrayList<DTNHost>(Arrays.asList(a, b));
-		Collections.sort(hs, Comparator.comparing(DTNHost::toString));
-		return hs;
-	}
-	
-	private String get_pair_id(DTNHost a, DTNHost b) {
-		List hs = order(a,b);
-		return hs.get(0) + "_" + hs.get(1);		
-	}
-	
     /**
      * Order the hosts by name (toString()), create an id and add a contact if not added by the other host.
      * @param a The host communicating with the host being updated
      * @param b The updating host
      */
     public void set_contact_start_time(DTNHost a, DTNHost b) {
-		String pair_id = get_pair_id(a, b);
-		List<DTNHost> hs = new ArrayList(order(a,b));
-		// the second add is ignored
-		if (!contact_map.keySet().contains(pair_id)) {
-			contact_map.put(pair_id, new Contact(hs.get(0), hs.get(1), round(SimClock.getTime(), 2), -1.0));
+    	Contact c = new Contact(a, b, round(SimClock.getTime(), 2), -1.0);
+		if (!contact_map.keySet().contains(c.pair_id())) {
+			contact_map.put(c.pair_id(), c);
 		}
     }
     
+    /**
+     * During simulation set the contact ending time.
+     * <p>
+     * When collecting the contact, we assume, that a pair of nodes must first close a contact before
+     * start a next one, since the simulation is sequential.
+     * Therefore, while collecting starting and ending time of a contact, we use as identifier just
+     * the pair_id, formed from the alphabetically ordered DTNHost names.
+     * When the contact is to be closed, we add the contact to another map with an identifier
+     * that includes starting and ending time, since there will be several contacts with the same pairs.
+     * 
+     * @param a The first node of a contact ordered alphabetically
+     * @param b The second node of a contact ordered alphabetically
+     */
     public void set_contact_end_time(DTNHost a, DTNHost b) {
-		String pair_id = get_pair_id(a, b);
+		String pair_id = (new Contact(a, b, 0.0, 1.0).pair_id());
 		if (!contact_map.containsKey(pair_id)) {
+			System.out.println("BUG: Closing a contact to which the key was not found.");
 			return;
 		}
-
 		if (contact_map.get(pair_id).end() == -1.0) {
 			contact_map.get(pair_id).set_end(round(SimClock.getTime(), 2));
-		} else {	// second time added, push to the vertex map
-			double start = contact_map.get(pair_id).begin();
-			double end = contact_map.get(pair_id).end();
-			String v_id = "contact_" + pair_id + "_" + start + "_" + end;
-			contacts_ready.put(v_id, contact_map.get(pair_id));
-			System.out.println("Completing " + v_id);
+		} else {	// second time added, push to the vertex map with the contact id (with begin and end time)
+			String c_id = contact_map.get(pair_id).contact_id();
+			contacts_ready.put(c_id, contact_map.get(pair_id));
+			System.out.println("Completing " + c_id);
 			contact_map.remove(pair_id);
 		}
     }
@@ -124,7 +122,6 @@ public class ContactPlanHandler {
         List<ContactJson> contactJsonList = null;
         if (!file.exists()) {
         	String fname = abs_name.substring(abs_name.lastIndexOf("/") + 1);
-        	System.out.println("Contact " + fname + " could not be found.");
         	return null;
         }
         
@@ -182,7 +179,7 @@ public class ContactPlanHandler {
     	}
     	
     	for (Contact c : cs) {
-    		String v_id = "vertex_" + c.generate_id();
+    		String v_id = "vertex_" + c.contact_id();
     		vertices.put(v_id, new Vertex(v_id, c, false));
     	}
     	
@@ -233,7 +230,8 @@ public class ContactPlanHandler {
     	/* TODO: change toString to a get_name() or get_id(). 
     	 * Leaving currently this way to minimize changing in current src code. */
         try ( PrintWriter writer = new PrintWriter(absolute_filename(h))) {
-            writer.write(String.join(",", json_list));
+            //writer.write(String.join(",", json_list));
+            writer.write("[" + String.join(",", json_list) + "]");
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();

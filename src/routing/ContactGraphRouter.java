@@ -19,7 +19,6 @@ import routing.cgr.ContactPlanHandler;
 public class ContactGraphRouter extends ActiveRouter {
 	
 	private DTNHost this_host;
-	private ContactPlanHandler cph;
 	private boolean setup;
 	private boolean create_cplan;
 
@@ -43,7 +42,6 @@ public class ContactGraphRouter extends ActiveRouter {
 		this_host = r.this_host;
 		setup = false;
 	}
-
 	
 	/**
 	 * - Run the normal ActiveRouter update
@@ -58,7 +56,7 @@ public class ContactGraphRouter extends ActiveRouter {
 		if (!setup) { 	// verify if we need a new contact plan
 			if (ContactPlanHandler.get().has_contact_plan()) {
 				create_cplan = false;	
-				// TODO: read the vertices, create edges, construct graph()
+				// TODO: iri read the vertices, create edges, construct graph()
 			} else {
 				create_cplan = true;
 			}
@@ -114,15 +112,23 @@ public class ContactGraphRouter extends ActiveRouter {
 	public void changedConnection(Connection con) {
 		super.changedConnection(con);
 
-		/*
-		 * Save infos about the interface for serialization later on
-		 * */
-		NetworkInterface peer_iface = get_peer_iface(con);
-		
-		if (con.isUp()) { // a contact start
-			cph.get().set_contact_start_time(getHost(), peer_iface.getHost());
+		if (create_cplan) {
+			/*
+			 * Save infos about the interface for serialization later on
+			 */
+			NetworkInterface peer_iface = get_peer_iface(con);
+
+			if (con.isUp()) { // a contact start
+				ContactPlanHandler.get().set_contact_start_time(getHost(), peer_iface.getHost());
+			} else {
+				ContactPlanHandler.get().set_contact_end_time(getHost(), peer_iface.getHost());
+			}
 		} else {
-			cph.get().set_contact_end_time(getHost(), peer_iface.getHost());
+			if (!con.isUp()) {
+				// TODO: iri what should we do with messages that were not sent on the 
+				// contact they were scheduled? -- enqueue to be re-route
+				// add to statistics
+			}
 		}
 	}
 }

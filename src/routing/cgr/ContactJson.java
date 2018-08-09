@@ -18,9 +18,8 @@ public class ContactJson {
     private String host_a;
     private String host_b;
 
-    private int     hash;
     /* The scenario hash is being saved in each contact for compatibility with old version
-     * TODO: put the hash on the filename concatenated with the node name. We need both just once. */
+     * TODO: iri put the hash on the filename concatenated with the node name. We need both just once. */
     private int     scenario_hash;
 
     private double start;
@@ -30,7 +29,6 @@ public class ContactJson {
 		host_a = c.get_hosts().get(0).toString();
 		host_b = c.get_hosts().get(1).toString();
 
-		hash = c.hashCode();
 		scenario_hash = scenarioHash;
 
 		start = c.begin();
