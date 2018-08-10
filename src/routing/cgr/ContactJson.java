@@ -15,8 +15,8 @@ import core.DTNHost;
 import core.SimScenario;
 
 public class ContactJson {
-    private String host_a;
-    private String host_b;
+    private int host_a_addr;
+    private int host_b_addr;
 
     /* The scenario hash is being saved in each contact for compatibility with old version
      * TODO: iri put the hash on the filename concatenated with the node name. We need both just once. */
@@ -28,8 +28,8 @@ public class ContactJson {
     private int transmission_speed;
     
     ContactJson(Contact c, int scenarioHash) {
-		host_a = c.get_hosts().getKey().toString();
-		host_b = c.get_hosts().getValue().toString();
+		host_a_addr = c.get_hosts().get(0).getAddress();
+		host_b_addr = c.get_hosts().get(1).getAddress();
 
 		scenario_hash = scenarioHash;
 
@@ -50,10 +50,10 @@ public class ContactJson {
 		Contact c = null;
 
 		for (DTNHost h : SimScenario.getInstance().getHosts()) {
-			if (h.toString().equals(host_a)) {
+			if (h.getAddress() == host_a_addr) {
 				a = h;
 			} else {
-				if (h.toString().equals(host_b)) {
+				if (h.getAddress() == host_b_addr) {
 					b = h;
 				}
 			}

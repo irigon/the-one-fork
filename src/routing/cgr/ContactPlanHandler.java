@@ -52,7 +52,7 @@ public class ContactPlanHandler {
 	}
 
     /**
-     * Order the hosts by name (toString()), create an id and add a contact if not added by the other host.
+     * Order the hosts by address, create an id and add a contact if not present.
      * @param a The host communicating with the host being updated
      * @param b The updating host
      */
@@ -99,8 +99,8 @@ public class ContactPlanHandler {
     public void finish_contactplan(DTNHost h) {
     	List<Contact> clist = new ArrayList(contact_map.values());
     	for (Contact c : clist) {
-    		Tuple<DTNHost, DTNHost> pair = c.get_hosts();
-    		set_contact_end_time(pair.getKey(), pair.getValue());
+    		List<DTNHost> hosts = c.get_hosts();
+    		set_contact_end_time(hosts.get(0), hosts.get(1));
     	}
     }
     
@@ -232,15 +232,12 @@ public class ContactPlanHandler {
     	List<String> json_list = new LinkedList<>();
     	ContactJson cj;
     	for (Contact c : contacts_ready.values()) {
-    		if (c.get_hosts().getKey().equals(h) || c.get_hosts().getValue().equals(h)) {
+    		if (c.get_hosts().contains(h)) {
     			cj = new ContactJson(c, getScenarioHash());
     			json_list.add(cj.toJson());
     		}
     	}
-    	/* TODO: change toString to a get_name() or get_id(). 
-    	 * Leaving currently this way to minimize changing in current src code. */
         try ( PrintWriter writer = new PrintWriter(absolute_filename(h))) {
-            //writer.write(String.join(",", json_list));
             writer.write("[" + String.join(",", json_list) + "]");
             writer.close();
         } catch (IOException e) {

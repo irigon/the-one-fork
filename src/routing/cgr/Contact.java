@@ -54,11 +54,11 @@ public class Contact {
 	 * Order a pair of contacts alphabetically by name
 	 * @param a DTNHost a
 	 * @param b DTNHost b
-	 * @return a list {a,b} ordered alphabetically by name (currently using .toString())
+	 * @return a list {a,b} ordered by address
 	 */
 	private List<DTNHost> order(DTNHost a, DTNHost b){
 		List<DTNHost> hs = new ArrayList<DTNHost>(Arrays.asList(a, b));
-		Collections.sort(hs, Comparator.comparing(DTNHost::toString));
+		Collections.sort(hs);
 		return hs;
 	}
 
@@ -124,6 +124,7 @@ public class Contact {
 		return pair_id() + "_" + adjusted_begin + "_" + end;
 	}
 	
+	/*TODO: do not use getString, but get_address() instead*/
 	public String pair_id() {
 		return host_a + "_" + host_b;
 	}
@@ -135,8 +136,8 @@ public class Contact {
 		return host_a;
 	}
 	
-	public Tuple get_hosts(){
-		return new Tuple(host_a, host_b);
+	public List<DTNHost> get_hosts(){
+		return Arrays.asList(host_a, host_b);
 	}
 		
 	public double begin() {

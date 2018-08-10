@@ -172,10 +172,10 @@ public class ContactGraphRouter extends ActiveRouter {
 	protected Connection tryMessagesToConnections(List<Message> messages, List<Connection> connections) {
 		for (int i = 0, n = messages.size(); i < n; i++) {
 			Message m = messages.get(i);
-			String next_hop = (String) m.getProperty(NEXT_CONTACT);
+			int next_hop_addr = (int) m.getProperty(NEXT_CONTACT);
 			for (Connection c : connections) {
-				String peer_name = c.getOtherNode(getHost()).toString();
-				if (peer_name.equals(next_hop)) {
+				int peer_addr = c.getOtherNode(getHost()).getAddress();
+				if (peer_addr == next_hop_addr) {
 					return c;
 				}
 			}
@@ -191,11 +191,11 @@ public class ContactGraphRouter extends ActiveRouter {
 		return false;
 	}
 
-	void set_message_next_hop(Message m, String next_hop) {
+	void set_message_next_hop(Message m, int address) {
 		if (m.getProperty(NEXT_CONTACT) != null)
-			m.updateProperty(NEXT_CONTACT, next_hop);
+			m.updateProperty(NEXT_CONTACT, address);
 		else
-			m.addProperty(NEXT_CONTACT, next_hop);
+			m.addProperty(NEXT_CONTACT, address);
 	}
 
 	/**
@@ -219,11 +219,8 @@ public class ContactGraphRouter extends ActiveRouter {
 		Path path = route_search.get_path(last_hop);
 		List<Vertex> path_list = path.get_path_as_list();
 		if (path_list.size() > 0) {
-			// TODO: iri change get_host to give a Tuple back
-			Tuple<DTNHost, DTNHost> h_list = path_list.get(0).get_hosts();
-			String next_hop = h_list.getKey().toString().contentEquals(getHost().toString()) ? h_list.getValue().toString()
-					: h_list.getKey().toString();
-			set_message_next_hop(m, next_hop);
+			DTNHost next_hop = path_list.get(0).get_other_host(getHost());
+			set_message_next_hop(m, next_hop.getAddress());
 			cg.consume_path(path, m, 0.01);
 			result = true;
 		}

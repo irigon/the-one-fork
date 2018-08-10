@@ -216,9 +216,8 @@ public class RouteSearch {
 			if (v_dst == null) {
 				System.out.println("What the hack");
 			}
-			Tuple<DTNHost, DTNHost> t_v = v_dst.get_hosts();
 			if (settled.contains(v_dst)) continue;
-			if (blacklist.contains(t_v.getKey()) || blacklist.contains(t_v.getValue())) continue;
+			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
 			if (!(v_dst.current_capacity() > size)) continue;
 			neighbors.add(v_dst);
 		}
@@ -327,13 +326,13 @@ public class RouteSearch {
 			if (c.is_pivot()) {
 				continue;
 			}
-			Tuple<DTNHost, DTNHost> ht = c.get_hosts();
+			List<DTNHost> hl = c.get_hosts();
 			// contacts including current host (used for pivot_begin) with enough capacity
-			if ((ht.getKey().equals(h) || ht.getValue().equals(h))  && c.current_capacity() > m.getSize()) {
+			if (hl.contains(h)  && c.current_capacity() > m.getSize()) {
 				orderedAdd(c, candidates.get("coi_src"));
 				// contacts including destination host (used for pivot end)
 			}
-			if ((ht.getKey().equals(m.getTo()) || ht.getValue().equals(m.getTo())) && c.current_capacity() > m.getSize()) {
+			if (hl.contains(m.getTo()) && c.current_capacity() > m.getSize()) {
 				orderedAdd(c, candidates.get("coi_dst"));
 			}
 		}
