@@ -33,6 +33,7 @@ public class ContactGraphRouter extends ActiveRouter {
 	private Graph cg;
 	private RouteSearch route_search;
 	private static final String NEXT_CONTACT = "contact";
+	private static final String TTL = "ttl";
 
 	/**
 	 * Constructor. Creates a new message router based on the settings in the given
@@ -142,22 +143,36 @@ public class ContactGraphRouter extends ActiveRouter {
 			/*
 			 * Connection got down: .
 			 */
-			if (!con.isUp()) { //re-run dijkstra on the enqueued messages for this contact that were not sent
-				//TODO: iri can we avoid to run this twice? It won't run twice, since the message is going to be 
-				// either rescheduled or dropped
+			if (!con.isUp()) { // conn down: re-run dijkstra on contacts that should have been sent 
 				List<Message> toDelete = new ArrayList<>();
 				for (Message m : getMessageCollection()) {
-					if (!isMessageDeliverable(m)) {
-						toDelete.add(m);
+					DTNHost other = con.getOtherNode(getHost());
+					if ((int)m.getProperty(NEXT_CONTACT) == other.getAddress()) {
+						if (other.getMessageCollection().contains(m)) {
+							// message was successfully transfered, delete it
+							toDelete.add(m);
+						} else {
+							// what todo with messages that where scheduled but could not be sent?
+						}
 					}
 				}
-				for (Message m : toDelete) {
+				for (Message m : toDelete) { 
 					deleteMessage(m.getId(), true);
-				}
+				}				
 			}
 		}
 	}
 
+	private Message tryMessageToConnection(Connection con, Message m, int next_hop_addr) {
+		int peer_addr = con.getOtherNode(getHost()).getAddress();
+		if (peer_addr == next_hop_addr) {
+			if (startTransfer(m, con) == RCV_OK) {
+				return m;	// accepted a message, don't try others
+			}
+		}
+		return null;
+	}
+	
 	/**
 	 * For every message to be sent (respecting the queue order), send the first
 	 * queued message to which we are connected to the next hop.
@@ -174,8 +189,7 @@ public class ContactGraphRouter extends ActiveRouter {
 			Message m = messages.get(i);
 			int next_hop_addr = (int) m.getProperty(NEXT_CONTACT);
 			for (Connection c : connections) {
-				int peer_addr = c.getOtherNode(getHost()).getAddress();
-				if (peer_addr == next_hop_addr) {
+				if (tryMessageToConnection(c, m, next_hop_addr) != null) {
 					return c;
 				}
 			}
@@ -208,11 +222,9 @@ public class ContactGraphRouter extends ActiveRouter {
 	 */
 	boolean isMessageDeliverable(Message m) {
 		boolean result = false;
-		// after initialization ttl is set to the max value, so we have to work around
-		// to set the correct value
-		// TODO: iri verify this
-		int ttl = m.getTtl() != Integer.MAX_VALUE ? m.getTtl() : msgTtl;
-		Vertex last_hop = route_search.search(getHost(), SimClock.getIntTime(), m);
+		double now = SimClock.getIntTime();
+		double expire = m.getTtl() != Integer.MAX_VALUE ? m.getTtl() * 60 + now : msgTtl * 60 + now;
+		Vertex last_hop = route_search.search(getHost(), now, m, expire);
 		if (last_hop == null) {
 			return false;
 		}
@@ -227,4 +239,22 @@ public class ContactGraphRouter extends ActiveRouter {
 		return result;
 	}
 
+	/**
+	 * A node just completed a message transmission. 
+	 * Recalculate path, exclude message if it is not reachable, set next hop otherwise.
+	 * @param from	Host from who the router got this message
+	 * @param m	Message to be sent
+	 * @return return Message
+	 */
+    @Override
+    public Message messageTransferred(String id, DTNHost from) {
+    	Message m = super.messageTransferred(id, from);
+    	if (m != null) {
+    		from.getRouter().removeFromMessages(m.getId());
+    		if (!isMessageDeliverable(m)) {
+    			removeFromMessages(m.getId());
+    		}
+    	}
+        return m;
+    }
 }

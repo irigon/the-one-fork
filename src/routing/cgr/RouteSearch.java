@@ -31,6 +31,7 @@ public class RouteSearch {
 	private Set<Vertex> settled;
 	private SortedSet<Vertex> unsettled;
 	private Distance<Integer, Vertex, Vertex, Double> distance_measure;
+	private static final String TTL = "ttl";
 
 	public RouteSearch(Graph g) {
 		vertices = g.get_vertice_map();
@@ -212,31 +213,29 @@ public class RouteSearch {
 	 *            The distance depends on the message size and transmission speed
 	 */
 
-	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
+	private void relax(Vertex v, Message m, List<DTNHost> blacklist, double ttl) {
 		int size = m.getSize();
-		int ttl = m.getTtl();
-//		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-//				.filter(e -> e.get_dst_begin() < ttl)      // filter out far in the future vertices
-//				.map(e -> vertices.get(e.get_dest_id()))
-//				.filter(e -> !settled.contains(e))         // filter out already settled vertices
-//				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-//				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
-//				.collect(Collectors.toList());
 
-		List<Vertex> neighbors = new ArrayList<>();
-		Vertex v_dst;
-		List<Edge> toDelete = new ArrayList<>();
-		for (Edge e : edges.get(v.get_id())) {
-			if (!(e.get_dst_begin() < ttl)) continue;
-			v_dst = vertices.get(e.get_dest_id());
-			if (settled.contains(v_dst)) continue;
-			if (v_dst == null) {
-				System.out.println("Again=?");
-			}
-			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
-			if (!(v_dst.current_capacity() > size)) continue;
-			neighbors.add(v_dst);
-		}
+		List<Vertex> neighbors = edges.get(v.get_id()).stream()
+				.filter(e -> e.get_dst_begin() < ttl)      // filter out far in the future vertices
+				.map(e -> vertices.get(e.get_dest_id()))
+				.filter(e -> !settled.contains(e))         // filter out already settled vertices
+				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
+				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
+				.collect(Collectors.toList());
+
+//		List<Vertex> neighbors = new ArrayList<>();
+//		neighbors = new ArrayList<>();
+//		Vertex v_dst;
+//		List<Edge> toDelete = new ArrayList<>();
+//		for (Edge e : edges.get(v.get_id())) {
+//			if (!(e.get_dst_begin() < ttl)) continue;
+//			v_dst = vertices.get(e.get_dest_id());
+//			if (settled.contains(v_dst)) continue;
+//			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
+//			if (!(v_dst.current_capacity() > size)) continue;
+//			neighbors.add(v_dst);
+//		}
 		
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
@@ -276,7 +275,7 @@ public class RouteSearch {
 	 *            End pivot
 	 * @return On success returns end pivot. Returns null if no path was found
 	 */
-	public Vertex run_dijkstra(Vertex pivot_begin, Vertex pivot_end, double now, Message m, List<DTNHost> blacklist) {
+	public Vertex run_dijkstra(Vertex pivot_begin, Vertex pivot_end, double now, Message m, List<DTNHost> blacklist, double expire) {
 		Vertex next = null;
 		Vertex out = null;
 
@@ -287,7 +286,7 @@ public class RouteSearch {
 			if (next.equals(pivot_end)) {
 				break;
 			}
-			relax(next, m, blacklist);
+			relax(next, m, blacklist, expire);
 			unsettled.remove(next);
 			settled.add(next);
 		}
@@ -365,11 +364,9 @@ public class RouteSearch {
 	 *            current simulation time
 	 * @param size
 	 *            message size
-	 * @param ttl
-	 *            message ttl
 	 * @return
 	 */
-	private Vertex search_ll(Map<String, List<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host) {
+	private Vertex search_ll(Map<String, List<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host, double expire) {
 		List<Vertex> coi_src = pivot_candidates.get("coi_src");
 		List<Vertex> coi_dst = pivot_candidates.get("coi_dst");
 
@@ -388,7 +385,7 @@ public class RouteSearch {
 		Vertex pivot_begin = (Vertex)p_begin.get(0);
 		Vertex pivot_end = (Vertex)p_end.get(0);
 		
-		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
+		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist, expire);
 		
 		//cleanup edges from vertices to end_pivots
 		for (Edge e: (List<Edge>)(Object)p_end.subList(1, p_end.size())) {
@@ -407,9 +404,12 @@ public class RouteSearch {
 	 *            simulation time
 	 * @param m
 	 *            message to be sent
+	 * @param expire 
+	 * 			  adjusted ttl taking in account the default given in the config file   
+	 *         
 	 * @return pivot_end on success or null if no path was found
 	 */
-	public Vertex search(DTNHost this_host, double now, Message m) {
+	public Vertex search(DTNHost this_host, double now, Message m, double expire) {
 		Map<String, List<Vertex>> pivot_candidates = new HashMap<String, List<Vertex>>();
 		Vertex pivot_begin = null;
 		Vertex pivot_end = null;
@@ -440,7 +440,7 @@ public class RouteSearch {
 
 		if (start_candidates_size > 0 && end_candidates_size > 0) {
 			// least latency:
-			pivot_end = search_ll(pivot_candidates, now, m, this_host);
+			pivot_end = search_ll(pivot_candidates, now, m, this_host, expire);
 		} else {
 			System.out.println("Pivot could not be found. There is no route.");
 		}
