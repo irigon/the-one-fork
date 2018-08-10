@@ -201,10 +201,13 @@ public class ContactPlanHandler {
 		}
     	
 		for (Vertex v1 : v_set) {
+//			if (!edges.containsKey(v1.get_id())) {
+				edges.put(v1.get_id(), new LinkedList<>());
+//			}
 			for (Vertex v2 : v_set) {
 				if (v1.get_common_host(v2) != null && v1.begin() < v2.end()) {
-					if (!edges.containsKey(v1.get_id())) {
-						edges.put(v1.get_id(), new LinkedList<>());
+					if ( v1.get_hosts().equals(v2.get_hosts()) ) {
+						continue; // do not create vertices to itself
 					}
 					edges.get(v1.get_id()).add(new Edge(v1, v2));
 				}

@@ -130,7 +130,7 @@ public class Contact {
 	}
 	
 	public DTNHost get_other_host(DTNHost x) {
-		if (x == host_a) {
+		if (x.equals(host_a)) {
 			return host_b;
 		}
 		return host_a;

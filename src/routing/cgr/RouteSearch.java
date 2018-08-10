@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import core.DTNHost;
 import core.Message;
+import core.SimClock;
 import jdk.internal.util.xml.impl.Pair;
 import util.Tuple;
 
@@ -164,15 +165,15 @@ public class RouteSearch {
 	}
 
 	/**
-	 * Delete unusable vertices. Assumption: If a vertex (and therefore a contact)
-	 * already ended, it can be discarded with its edges.
+	 * Delete ended contacts, their edges and the edges that point to them.
 	 * 
 	 * @param now
 	 *            current simulation time
 	 * @return the most recent contact from cur_host with begin before now
 	 */
 	private void prune(double now) {
-		List<Vertex> to_delete = new LinkedList<Vertex>();
+		Set<Vertex> to_delete = new HashSet<Vertex>();
+		Set<Edge> edges_to_delete = new HashSet<>();
 
 		for (Vertex v : vertices.values()) {
 			// pivots on vertices map is garbage from old runs.
@@ -180,11 +181,25 @@ public class RouteSearch {
 				to_delete.add(v);
 			}
 		}
-
-		// prune
+		
+		// prune old vertices and its edges
 		for (Vertex v : to_delete) {
 			edges.remove(v.get_id());
 			vertices.remove(v.get_id());
+		}
+
+		// delete the edges that pointed to the above deleted vertices
+		for (List<Edge> le : edges.values()) {
+			for (Edge e : le) {
+				if (to_delete.contains(e.get_dst_vertex())){
+					edges_to_delete.add(e);
+				}
+			}
+		}
+		
+		for (Edge e : edges_to_delete) {
+			String src = e.get_src_vertex().get_id();
+			edges.get(src).remove(e);
 		}
 	}
 
@@ -210,13 +225,14 @@ public class RouteSearch {
 
 		List<Vertex> neighbors = new ArrayList<>();
 		Vertex v_dst;
+		List<Edge> toDelete = new ArrayList<>();
 		for (Edge e : edges.get(v.get_id())) {
 			if (!(e.get_dst_begin() < ttl)) continue;
 			v_dst = vertices.get(e.get_dest_id());
-			if (v_dst == null) {
-				System.out.println("What the hack");
-			}
 			if (settled.contains(v_dst)) continue;
+			if (v_dst == null) {
+				System.out.println("Again=?");
+			}
 			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
 			if (!(v_dst.current_capacity() > size)) continue;
 			neighbors.add(v_dst);

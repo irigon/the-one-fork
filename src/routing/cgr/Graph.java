@@ -56,6 +56,40 @@ public class Graph {
 	}
 	
 	/**
+	 * Split a contact if the communication starts in the middle and finishes before its end
+	 * @param n_start
+	 * @param o_end
+	 * @param n_end
+	 * @param o_v
+	 * @param n_v
+	 */
+	private void split_contact(double n_start, double o_end, double n_end, Vertex o_v, double epslon) {
+		Vertex n_v;
+		o_v.set_end(n_start);	// reduce original
+		if((n_start + epslon * .001) < o_end) { // needs new vertices at the end
+			n_v = new Vertex(o_v, n_end, o_end);
+			vertices.put(n_v.get_id(), n_v);
+			edges.put(n_v.get_id(), new LinkedList<>());
+			for (Edge e: edges.get(o_v.get_id())) {
+				edges.get(n_v.get_id()).add(new Edge(n_v, e.get_dst_vertex()));
+			}
+			// copy the edges that arrived at the original node to the new created one
+			List<Edge> to_add = new LinkedList<>();
+			for (Map.Entry <String, List<Edge>> entry : edges.entrySet()) {
+				for (Edge e: entry.getValue()) {
+					if (e.get_dst_vertex().equals(o_v)) { 
+						to_add.add(new Edge(e.get_src_vertex(), n_v));
+					}
+				}
+			}
+
+			for (Edge e: to_add) {
+				edges.get(e.get_src_vertex().get_id()).add(e);
+			}
+		}		
+	}
+	
+	/**
 	 * Update the channel capacity through path p for message m.
 	 * Contacts smaller than epslon (milliseconds) are discarded
 	 * 
@@ -81,7 +115,6 @@ public class Graph {
 		double original_end;
 		double transmission_time;
 		double comm_ends;
-		Vertex new_v;
 		
 		List<Vertex> path_as_list = p.get_path_as_list();
 		List<Vertex> fragmented_vertices = new LinkedList<>();
@@ -92,34 +125,10 @@ public class Graph {
 			comm_ends = ContactPlanHandler.round(comm_start + (double)msize/v.get_transmission_speed(), 2); 
 			original_end = v.end();
 			if (comm_start > v.adjusted_begin()) { // split contact
-				v.set_end(comm_start);	// reduce original
-				if((comm_ends + epslon * .001) < original_end) { // needs new vertices at the end
-					new_v = new Vertex(v, comm_ends, original_end);
-					vertices.put(new_v.get_id(), new_v);
-					edges.put(new_v.get_id(), new LinkedList<>());
-					for (Edge e: edges.get(v.get_id())) {
-						edges.get(new_v.get_id()).add(e);
-					}
-					// copy the edges that arrived at the original node to the new created one
-					List<Edge> to_add = new LinkedList<>();
-					for (Map.Entry <String, List<Edge>> entry : edges.entrySet()) {
-						String key = null;
-						for (Edge e: entry.getValue()) {
-							if (e.get_dst_vertex() == v) { 
-								// TODO: iri understand why this is happening
-								key = entry.getKey();
-								to_add.add(new Edge(e.get_src_vertex(), new_v));
-							}
-						}
-						if (key != null) {
-							edges.get(key).addAll(to_add);
-						}
-					}
-				}
+				split_contact(comm_start, original_end, comm_ends, v, epslon);
 			} else {
 				v.set_adjusted_begin(comm_ends);
 				comm_start = comm_ends;
-				
 			}
 			
 		}
