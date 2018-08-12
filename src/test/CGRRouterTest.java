@@ -359,7 +359,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 */
 
 		// 1 vertex graph
-		end_pivot = rs01.search(v4.get_hosts().get(0), 0.0, m01);
+		end_pivot = rs01.search(v4.get_hosts().get(0), 0.0, m01, Integer.MAX_VALUE);
 		assertNotNull(end_pivot);
 		path = rs01.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v4);
@@ -370,13 +370,13 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 *   v3   v4
 		 *   o----o
 		 */
-		end_pivot = rs02.search(v3.get_hosts().get(0), 0.0, m02);
+		end_pivot = rs02.search(v3.get_hosts().get(0), 0.0, m02, Integer.MAX_VALUE);
 		path = rs02.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
 		assertEquals(path.get_path_as_list().get(1), v4);
 		assertEquals(path.get_path_as_list().size(), 2);
 		// 3 vertex graph
-		end_pivot = rs03.search(v3.get_hosts().get(0), 0.0, m03);
+		end_pivot = rs03.search(v3.get_hosts().get(0), 0.0, m03, Integer.MAX_VALUE);
 		path = rs03.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
 		assertEquals(path.get_path_as_list().get(1), v4);
@@ -407,18 +407,18 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 */
 		
 		Message m = new Message(hx10, hx9,  "TestMessage", 10);
-		end_pivot = rs09.search(hx10, 105.0, m);
+		end_pivot = rs09.search(hx10, 105.0, m, Integer.MAX_VALUE);
 		assertEquals(distances.get(end_pivot), 202.0); // p2_x9 has distance 281.0, pivot has p2_x9 +1
 
 		m = new Message(hx10, hx8,  "TestMessage", 10);
-		end_pivot = rs09.search(hx10, 150.0, m);
+		end_pivot = rs09.search(hx10, 150.0, m, Integer.MAX_VALUE);
 		assertEquals(distances.get(end_pivot), 252.0); 
 
-		end_pivot = rs09.search(hx10, 200.0, m);
+		end_pivot = rs09.search(hx10, 200.0, m, Integer.MAX_VALUE);
 		assertEquals(distances.get(end_pivot), 332.0); 
 
 		m = new Message(hx10, hx9,  "TestMessage", 10);
-		end_pivot = rs09.search(hx10, 205.0, m);
+		end_pivot = rs09.search(hx10, 205.0, m, Integer.MAX_VALUE);
 		assertEquals(distances.get(end_pivot), 392.0); 
 		
 	}
@@ -474,7 +474,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		List<Object> pivot_structure = create_and_init_pivot(rs05, Arrays.asList(v3), src, true);
 
 		Vertex begin_pivot = (Vertex)pivot_structure.get(0);
-		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03);
+		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03, Integer.MAX_VALUE);
 		assertNotNull(end_pivot);
 		path = rs05.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
@@ -506,7 +506,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	 */
 
 	public void test_convergence() {
-		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m06);
+		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m06, Integer.MAX_VALUE);
 		assertNotNull(end_pivot);
 		path = rs06.get_path(end_pivot);
 
@@ -529,7 +529,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 * 
 		 */
 
-		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m07);
+		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m07, Integer.MAX_VALUE);
 		assertNotNull(end_pivot);
 		path = rs06.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
@@ -641,7 +641,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	
 		Vertex result;
 		
-		result = rs10.search(h10, 120.0, m);
+		result = rs10.search(h10, 120.0, m, Integer.MAX_VALUE);
 		assertTrue(result.is_pivot());
 		assertEquals(vertices.size(), 8); // v421, v61, v42, v8, v9, v71, pivot_begin, pivot_end
 		assertEquals(edges.size(), 8); 
@@ -658,13 +658,13 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(edges.size(), 9); 
 		assertEquals(edges.get(v421.get_id()).size(), 2);
 
-		result = rs10.search(h10, 120.0, m);
+		result = rs10.search(h10, 120.0, m, Integer.MAX_VALUE);
 		assertFalse(result.is_pivot());
 		assertEquals(p.construct(result, predecessors).size(), 0);	// empty path, list with size 0
 		
 		// for a 1 sec message there should still be enough resource
 		m = new Message(h10, h12,  "TestMessage", 10);
-		result = rs10.search(h10, 120.0, m);
+		result = rs10.search(h10, 120.0, m, Integer.MAX_VALUE);
 		assertTrue(result.is_pivot());
 		assertEquals(vertices.size(), 9); 
 		assertEquals(edges.size(), 9); 
@@ -700,7 +700,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		Map<Vertex, Vertex> predecessors = (Map<Vertex, Vertex>) get_private("predecessors", rs09);
 		Map<String, Vertex> vertices = (Map<String, Vertex>) get_private("vertices", rs09);
 		Message m = new Message(hx10, hx9,  "TestMessage", 50);
-		end_pivot = rs09.search(hx10, 104.0, m);
+		end_pivot = rs09.search(hx10, 104.0, m, Integer.MAX_VALUE);
 		assertEquals(distances.get(end_pivot), 210.0); 
 		
 		Path p = new Path();

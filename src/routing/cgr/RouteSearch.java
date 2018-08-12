@@ -1,7 +1,5 @@
 package routing.cgr;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -17,9 +15,6 @@ import java.util.stream.Collectors;
 
 import core.DTNHost;
 import core.Message;
-import core.SimClock;
-import jdk.internal.util.xml.impl.Pair;
-import util.Tuple;
 
 public class RouteSearch {
 
@@ -31,7 +26,7 @@ public class RouteSearch {
 	private Set<Vertex> settled;
 	private SortedSet<Vertex> unsettled;
 	private Distance<Integer, Vertex, Vertex, Double> distance_measure;
-	private static final String TTL = "ttl";
+	private double expire_time;
 
 	public RouteSearch(Graph g) {
 		vertices = g.get_vertice_map();
@@ -43,6 +38,7 @@ public class RouteSearch {
 		settled = new HashSet<>();
 		hops = new HashMap<>();
 		distance_measure = least_latency;
+		expire_time = Double.POSITIVE_INFINITY;
 	}
 
 	/**
@@ -85,7 +81,7 @@ public class RouteSearch {
 			this.distance_measure = least_latency;
 		}
 	}
-
+	
 	/**
 	 * Create the a pivot and add it to vertices.
 	 * 
@@ -213,30 +209,17 @@ public class RouteSearch {
 	 *            The distance depends on the message size and transmission speed
 	 */
 
-	private void relax(Vertex v, Message m, List<DTNHost> blacklist, double ttl) {
+	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
 
 		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-				.filter(e -> e.get_dst_begin() < ttl)      // filter out far in the future vertices
+				.filter(e -> e.get_dst_begin() < this.expire_time) // filter out far in the future vertices
 				.map(e -> vertices.get(e.get_dest_id()))
 				.filter(e -> !settled.contains(e))         // filter out already settled vertices
 				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
 				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
 				.collect(Collectors.toList());
 
-//		List<Vertex> neighbors = new ArrayList<>();
-//		neighbors = new ArrayList<>();
-//		Vertex v_dst;
-//		List<Edge> toDelete = new ArrayList<>();
-//		for (Edge e : edges.get(v.get_id())) {
-//			if (!(e.get_dst_begin() < ttl)) continue;
-//			v_dst = vertices.get(e.get_dest_id());
-//			if (settled.contains(v_dst)) continue;
-//			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
-//			if (!(v_dst.current_capacity() > size)) continue;
-//			neighbors.add(v_dst);
-//		}
-		
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
 			if (at < n.end()) {
@@ -275,7 +258,7 @@ public class RouteSearch {
 	 *            End pivot
 	 * @return On success returns end pivot. Returns null if no path was found
 	 */
-	public Vertex run_dijkstra(Vertex pivot_begin, Vertex pivot_end, double now, Message m, List<DTNHost> blacklist, double expire) {
+	public Vertex run_dijkstra(Vertex pivot_begin, Vertex pivot_end, double now, Message m, List<DTNHost> blacklist) {
 		Vertex next = null;
 		Vertex out = null;
 
@@ -286,7 +269,7 @@ public class RouteSearch {
 			if (next.equals(pivot_end)) {
 				break;
 			}
-			relax(next, m, blacklist, expire);
+			relax(next, m, blacklist);
 			unsettled.remove(next);
 			settled.add(next);
 		}
@@ -366,7 +349,7 @@ public class RouteSearch {
 	 *            message size
 	 * @return
 	 */
-	private Vertex search_ll(Map<String, List<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host, double expire) {
+	private Vertex search_ll(Map<String, List<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host) {
 		List<Vertex> coi_src = pivot_candidates.get("coi_src");
 		List<Vertex> coi_dst = pivot_candidates.get("coi_dst");
 
@@ -385,7 +368,7 @@ public class RouteSearch {
 		Vertex pivot_begin = (Vertex)p_begin.get(0);
 		Vertex pivot_end = (Vertex)p_end.get(0);
 		
-		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist, expire);
+		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
 		
 		//cleanup edges from vertices to end_pivots
 		for (Edge e: (List<Edge>)(Object)p_end.subList(1, p_end.size())) {
@@ -409,10 +392,20 @@ public class RouteSearch {
 	 *         
 	 * @return pivot_end on success or null if no path was found
 	 */
-	public Vertex search(DTNHost this_host, double now, Message m, double expire) {
+	public Vertex search(DTNHost this_host, double now, Message m, int configTtl) {
 		Map<String, List<Vertex>> pivot_candidates = new HashMap<String, List<Vertex>>();
 		Vertex pivot_begin = null;
 		Vertex pivot_end = null;
+		/* transform the ttl (minutes) to the expiration in time (time when the message was
+		*	created + original ttl
+		*/
+		if (m.getTtl() == Integer.MAX_VALUE) { // ttl not defined in msg. Get the value from config
+			this.expire_time = configTtl;
+		} else { 	// ttl is configured in message
+			configTtl = m.getTtl();
+		}
+		this.expire_time = this.expire_time * 60 + now; // set the expiration time relative to the moment it was created
+		
 
 		/*
 		 * Choose search type: If we aim for least latency, we are interested in the
@@ -440,7 +433,7 @@ public class RouteSearch {
 
 		if (start_candidates_size > 0 && end_candidates_size > 0) {
 			// least latency:
-			pivot_end = search_ll(pivot_candidates, now, m, this_host, expire);
+			pivot_end = search_ll(pivot_candidates, now, m, this_host);
 		} else {
 			System.out.println("Pivot could not be found. There is no route.");
 		}

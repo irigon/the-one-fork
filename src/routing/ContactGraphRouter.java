@@ -33,7 +33,6 @@ public class ContactGraphRouter extends ActiveRouter {
 	private Graph cg;
 	private RouteSearch route_search;
 	private static final String NEXT_CONTACT = "contact";
-	private static final String TTL = "ttl";
 
 	/**
 	 * Constructor. Creates a new message router based on the settings in the given
@@ -223,8 +222,7 @@ public class ContactGraphRouter extends ActiveRouter {
 	boolean isMessageDeliverable(Message m) {
 		boolean result = false;
 		double now = SimClock.getIntTime();
-		double expire = m.getTtl() != Integer.MAX_VALUE ? m.getTtl() * 60 + now : msgTtl * 60 + now;
-		Vertex last_hop = route_search.search(getHost(), now, m, expire);
+		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
 		if (last_hop == null) {
 			return false;
 		}
