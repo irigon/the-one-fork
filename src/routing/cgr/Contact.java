@@ -1,10 +1,14 @@
 package routing.cgr;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import core.DTNHost;
 import core.NetworkInterface;
+import util.Tuple;
 
 /*
  * A contact between two hosts: host_a and host_b
@@ -18,27 +22,21 @@ public class Contact {
 	private double end;
 	// Adjusted contact begin due to resource allocation
 	private double adjusted_begin;
-	private String cid;
 	private int transmission_speed;
+	private String interface_type;
 	private int hash;
-	
+	private String cid;
+
 	public Contact (DTNHost a, DTNHost b, double contactStart, double contactEnd) {
-		/* Order the hosts alphabetically */
-		if (a.compareTo(b) < 0){
-			host_a = a;
-			host_b = b;
-		} else {
-			host_a = b;
-			host_b = a;
-		}
-		
-		cid = "cid_" + host_a + "_" + host_b + "_" + (int)contactStart + "_" + 0;
-		
+		List<DTNHost> ordered = order(a,b);
+		host_a = ordered.get(0);
+		host_b = ordered.get(1);
 		begin = contactStart;
 		adjusted_begin = begin;
 		end = contactEnd;
 		transmission_speed = calculate_transmission_speed(a, b);
 		hash = 0;
+		cid = contact_id();
 	}
 	
 	public Contact(Contact contact) {
@@ -51,17 +49,32 @@ public class Contact {
 		transmission_speed = contact.transmission_speed;
 		hash = contact.hash;
 	}
-	
+
+	/**
+	 * Order a pair of contacts alphabetically by name
+	 * @param a DTNHost a
+	 * @param b DTNHost b
+	 * @return a list {a,b} ordered by address
+	 */
+	private List<DTNHost> order(DTNHost a, DTNHost b){
+		List<DTNHost> hs = new ArrayList<DTNHost>(Arrays.asList(a, b));
+		Collections.sort(hs);
+		return hs;
+	}
+
 	/**
 	 * Find out the transmission speed between host x and y in this contact
 	 * Goes through every interface and gets the first pair of interfaces of the 
 	 * same type (compatible) that have a range wide enough to start a communication
 	 * 
+	 * WARNING: this function will just return the right value if this function is called
+	 * when both nodes in contact at the time when the method is called (on the fly)
+	 * 
 	 * @param x DTNHost partner
 	 * @param y DTNHost partner
 	 * @return the transmission speed of this contact, 0 if no appropriate interface was found
 	 */
-	private int calculate_transmission_speed(DTNHost x, DTNHost y) {
+	public int calculate_transmission_speed(DTNHost x, DTNHost y) {
 		List<NetworkInterface> lna = x.getInterfaces();
 		List<NetworkInterface> lnb = y.getInterfaces();
 		
@@ -70,7 +83,7 @@ public class Contact {
 		for (NetworkInterface nai : lna) {
 			double x_radio_range = nai.getTransmitRange();
 			for (NetworkInterface nbi : lnb) {
-				if (nbi.getInterfaceType() != nai.getInterfaceType()) {
+				if (!nbi.getInterfaceType().equals(nai.getInterfaceType())) {
 					continue;
 				}
 				double y_radio_range = nbi.getTransmitRange();
@@ -86,6 +99,10 @@ public class Contact {
 		return transmission_speed;
 	}
 	
+	public void set_transmission_speed(int ts) {
+		transmission_speed = ts;
+	}
+	
 	public double get_current_capacity() {
 		return (end - adjusted_begin) * transmission_speed;
 	}
@@ -94,8 +111,26 @@ public class Contact {
 		return cid;
 	}
 	
+	/**
+	 * Generates an id for this contact
+	 * <p>
+	 * We use adjusted begin instead of begin, so that if the contact is updated
+	 * and a new contact is generated from it (for example on overlapping contacts)
+	 * the new generated will have a different id from the original one.
+	 * 
+	 * @return Generated id
+	 */
+	public String contact_id() {
+		return pair_id() + "_" + adjusted_begin + "_" + end;
+	}
+	
+	/*TODO: do not use getString, but get_address() instead*/
+	public String pair_id() {
+		return host_a.getAddress() + "_" + host_b.getAddress();
+	}
+	
 	public DTNHost get_other_host(DTNHost x) {
-		if (x == host_a) {
+		if (x.equals(host_a)) {
 			return host_b;
 		}
 		return host_a;
@@ -124,7 +159,6 @@ public class Contact {
 	public double end() {
 		return end;
 	}
-
 	
     @Override
     public int hashCode() {

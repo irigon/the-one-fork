@@ -1,6 +1,6 @@
 package routing.cgr;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,11 +12,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import core.DTNHost;
 import core.Message;
-import jdk.internal.util.xml.impl.Pair;
 
 public class RouteSearch {
 
@@ -28,6 +26,7 @@ public class RouteSearch {
 	private Set<Vertex> settled;
 	private SortedSet<Vertex> unsettled;
 	private Distance<Integer, Vertex, Vertex, Double> distance_measure;
+	private double expire_time;
 
 	public RouteSearch(Graph g) {
 		vertices = g.get_vertice_map();
@@ -39,6 +38,7 @@ public class RouteSearch {
 		settled = new HashSet<>();
 		hops = new HashMap<>();
 		distance_measure = least_latency;
+		expire_time = Double.POSITIVE_INFINITY;
 	}
 
 	/**
@@ -81,7 +81,7 @@ public class RouteSearch {
 			this.distance_measure = least_latency;
 		}
 	}
-
+	
 	/**
 	 * Create the a pivot and add it to vertices.
 	 * 
@@ -118,7 +118,6 @@ public class RouteSearch {
 				pivot_obj_list.add(to_pivot);
 			}
 		}
-
 		return pivot_obj_list;
 	}
 	
@@ -162,15 +161,15 @@ public class RouteSearch {
 	}
 
 	/**
-	 * Delete unusable vertices. Assumption: If a vertex (and therefore a contact)
-	 * already ended, it can be discarded with its edges.
+	 * Delete ended contacts, their edges and the edges that point to them.
 	 * 
 	 * @param now
 	 *            current simulation time
 	 * @return the most recent contact from cur_host with begin before now
 	 */
 	private void prune(double now) {
-		List<Vertex> to_delete = new LinkedList<Vertex>();
+		Set<Vertex> to_delete = new HashSet<Vertex>();
+		Set<Edge> edges_to_delete = new HashSet<>();
 
 		for (Vertex v : vertices.values()) {
 			// pivots on vertices map is garbage from old runs.
@@ -178,11 +177,25 @@ public class RouteSearch {
 				to_delete.add(v);
 			}
 		}
-
-		// prune
+		
+		// prune old vertices and its edges
 		for (Vertex v : to_delete) {
 			edges.remove(v.get_id());
 			vertices.remove(v.get_id());
+		}
+
+		// delete the edges that pointed to the above deleted vertices
+		for (List<Edge> le : edges.values()) {
+			for (Edge e : le) {
+				if (to_delete.contains(e.get_dst_vertex())){
+					edges_to_delete.add(e);
+				}
+			}
+		}
+		
+		for (Edge e : edges_to_delete) {
+			String src = e.get_src_vertex().get_id();
+			edges.get(src).remove(e);
 		}
 	}
 
@@ -197,15 +210,28 @@ public class RouteSearch {
 
 	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
-		int ttl = m.getTtl();
-		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-				.filter(e -> e.get_dst_begin() < ttl)      // filter out far in the future vertices
-				.map(e -> vertices.get(e.get_dest_id()))
-				.filter(e -> !settled.contains(e))         // filter out already settled vertices
-				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
-				.collect(Collectors.toList());
 
+//		List<Vertex> neighbors = edges.get(v.get_id()).stream()
+//				.filter(e -> e.get_dst_begin() < this.expire_time) // filter out far in the future vertices
+//				.map(e -> vertices.get(e.get_dest_id()))
+//				.filter(e -> !settled.contains(e))         // filter out already settled vertices
+//				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
+//				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
+//				.collect(Collectors.toList());
+
+		List<Vertex> neighbors = new ArrayList<>();
+		neighbors = new ArrayList<>();
+		Vertex v_dst;
+		List<Edge> toDelete = new ArrayList<>();
+		for (Edge e : edges.get(v.get_id())) {
+			if (!(e.get_dst_begin() < this.expire_time)) continue;
+			v_dst = vertices.get(e.get_dest_id());
+			if (settled.contains(v_dst)) continue;
+			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
+			if (!(v_dst.current_capacity() > size)) continue;
+			neighbors.add(v_dst);
+		}
+		
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
 			if (at < n.end()) {
@@ -310,12 +336,13 @@ public class RouteSearch {
 			if (c.is_pivot()) {
 				continue;
 			}
+			List<DTNHost> hl = c.get_hosts();
 			// contacts including current host (used for pivot_begin) with enough capacity
-			if (c.get_hosts().contains(h) && c.current_capacity() > m.getSize()) {
+			if (hl.contains(h)  && c.current_capacity() > m.getSize()) {
 				orderedAdd(c, candidates.get("coi_src"));
 				// contacts including destination host (used for pivot end)
 			}
-			if (c.get_hosts().contains(m.getTo()) && c.current_capacity() > m.getSize()) {
+			if (hl.contains(m.getTo()) && c.current_capacity() > m.getSize()) {
 				orderedAdd(c, candidates.get("coi_dst"));
 			}
 		}
@@ -332,8 +359,6 @@ public class RouteSearch {
 	 *            current simulation time
 	 * @param size
 	 *            message size
-	 * @param ttl
-	 *            message ttl
 	 * @return
 	 */
 	private Vertex search_ll(Map<String, List<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host) {
@@ -364,6 +389,17 @@ public class RouteSearch {
 		
 		return pivot_end;
 	}
+		
+		private double final_distance(Vertex pivot) {
+			double ret = 0.0;
+			if (pivot != null) {
+				if (predecessors.get(pivot) != null) {
+					Vertex pred = predecessors.get(pivot);
+					ret = distances.get(pred);
+				}
+			}
+			return ret;
+		}
 
 	/**
 	 * Search the best path using Dijkstra algorithm
@@ -374,12 +410,25 @@ public class RouteSearch {
 	 *            simulation time
 	 * @param m
 	 *            message to be sent
+	 * @param expire 
+	 * 			  adjusted ttl taking in account the default given in the config file   
+	 *         
 	 * @return pivot_end on success or null if no path was found
 	 */
-	public Vertex search(DTNHost this_host, double now, Message m) {
+	public Vertex search(DTNHost this_host, double now, Message m, int configTtl) {
 		Map<String, List<Vertex>> pivot_candidates = new HashMap<String, List<Vertex>>();
 		Vertex pivot_begin = null;
 		Vertex pivot_end = null;
+		/* transform the ttl (minutes) to the expiration in time (time when the message was
+		*	created + original ttl
+		*/
+		if (m.getTtl() == Integer.MAX_VALUE) { // ttl not defined in msg. Get the value from config
+			this.expire_time = configTtl;
+		} else { 	// ttl is configured in message
+			configTtl = m.getTtl();
+		}
+		this.expire_time = this.expire_time * 60 + now; // set the expiration time relative to the moment it was created
+		
 
 		/*
 		 * Choose search type: If we aim for least latency, we are interested in the
@@ -411,6 +460,12 @@ public class RouteSearch {
 		} else {
 			System.out.println("Pivot could not be found. There is no route.");
 		}
+
+		// assert that distance to arrive at destination < expiration time
+		if (final_distance(pivot_end) > expire_time) { 
+			pivot_end = null;
+		}
+		
 		return pivot_end;
 	}
 }

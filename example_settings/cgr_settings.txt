@@ -1,0 +1,3 @@
+Scenario.name = CGR
+Group.router = ContactGraphRouter
+Scenario.endTime = 300

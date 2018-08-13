@@ -1,8 +1,10 @@
 package routing.cgr;
 
+import java.util.Arrays;
 import java.util.List;
 
 import core.DTNHost;
+import util.Tuple;
 
 public class Vertex {
 	
@@ -29,10 +31,9 @@ public class Vertex {
 	}
 	
 	public Vertex(Vertex v, double start, double end) {
-		DTNHost a = v.get_hosts().get(0);
-		DTNHost b = v.get_hosts().get(1);
-		contact = new Contact(a, b, start, end);
-		vid = v.get_id() +  "_" + start + "_" + end;
+		List<DTNHost> hl = v.get_hosts();
+		contact = new Contact(hl.get(0), hl.get(1), start, end);
+		vid = "vertex_" +  contact.get_id();
 		is_pivot = v.is_pivot();
 		sender = v.sender;
 		receiver = v.receiver;
@@ -93,10 +94,9 @@ public class Vertex {
 	}
 	
 	public DTNHost get_common_host(Vertex x) {
-		List<DTNHost> x_hosts = x.get_hosts();
-		for (DTNHost l : contact.get_hosts()) {
-			if (x_hosts.contains(l)) {
-				return l;
+		for (DTNHost h : get_hosts()) {
+			if (x.get_hosts().contains(h)) {
+				return h;
 			}
 		}
 		return null;
@@ -116,7 +116,8 @@ public class Vertex {
 	
 	@Override
 	public String toString() {
-		return this.get_id() + " [" + this.get_hosts().get(0) + ", " + this.get_hosts().get(1) + "] ";
+		List<DTNHost>hl = get_hosts();
+		return this.get_id() + " [" + hl.get(0) + ", " + hl.get(1) + "] ";
 	}
 	
     @Override
