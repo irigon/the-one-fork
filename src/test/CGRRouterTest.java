@@ -327,9 +327,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		/*
 		 * g2 vertex graph
 		 */
-		// private Vertex create_pivot_and_initialize(DTNHost h, double start_time,
-		// double end_time) {
-		// initialize_route_search(rs02, m02, 0.0, v3.get_hosts().get(0));
 		src = v3.get_hosts().get(0);
 		pivot_structure = create_and_init_pivot(rs02, Arrays.asList(v3), src, true);
 		pivot_begin = (Vertex)pivot_structure.get(0);
@@ -802,14 +799,33 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	
 	/*
 	 * Send a message from a host to a destination in a graph with two nodes, with normal contacts
-	 *  - src, dst exist and start + resource < capacity --> ok
+	 *  [1] src, dst exist and start + resource < capacity --> ok
 	 *  
 	 * Same, but contacts overlap
-	 *  - src, dst exist and start + resource < capacity --> ok
-	 *  - not enough capacity for the second transfer
+	 *  [2] src, dst exist and start + resource < capacity --> ok
+	 *  [3] not enough capacity for the second transfer
 	 */
 	public void test_graph_one_node_02() {
-		assert(false);
+		/* [1] c3(h10, h11, 0.0, 10.0), c4(h11, h12, 20.0, 30.0) */
+		Message m = new Message(h10, h12,  "TestMessage", 60);
+		end_pivot = rs02.search(h10, 0.0, m, TTL);
+		assertTrue(end_pivot.get_hosts().contains(h12));
+	
+		/* [2] src, dst exist and start + resource < capacity --> ok, overlapping contacts  
+		c42 (h11, h12, 120.0, 130.0),  c421 (h10, h11, 120.0, 130.0)	*/
+		m = new Message(h10, h12,  "TestMessage", 30);
+		Map<String, Vertex> vmap = initialize_vmap(Arrays.asList(v421, v42));
+		Map<String, List<Edge>> ledges = initialize_edges(vmap);
+		ledges.get(v421.get_id()).add(e64);  
+		Graph g = new Graph(vmap, ledges);
+		RouteSearch rs = new RouteSearch(g);
+		end_pivot = rs.search(h10, 122.0, m, TTL);
+		assertTrue(end_pivot.get_hosts().contains(h12));
+		
+		/* [3]not enough capacity for the second transfer */  
+		m = new Message(h10, h12,  "TestMessage", 40);
+		end_pivot = rs.search(h10, 122.0, m, TTL);
+		assertTrue(end_pivot.get_hosts().contains(h10));
 	}
 	
 	
