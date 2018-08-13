@@ -33,6 +33,8 @@ public class ContactPlanHandler {
 	Map<String, Contact> contact_map;
 	Map<String, Contact> contacts_ready;
 	private int scenario_hash;
+	private static boolean finished;
+	private static int counter;
 	
     private static final String CONTACT_PLAN_D = File.separatorChar + 
     		"data" + File.separatorChar + "contact_plans" + File.separatorChar;
@@ -47,6 +49,8 @@ public class ContactPlanHandler {
 			cpl.contacts_ready = new HashMap<>();
 			CPLAN_DIR = new File("").getAbsolutePath() + CONTACT_PLAN_D;
 			create_contact_plan_dir();
+			finished = false;
+			counter = 0;
 		}
 		return cpl;
 	}
@@ -64,6 +68,20 @@ public class ContactPlanHandler {
     }
     
     /**
+     * On greater scenarios, contact plan can take quite sometime.
+     * This counter show if some progress is happening.
+     */
+    public void output_percentage() {
+    	double total_time = SimScenario.getInstance().getEndTime();
+    	double tenth = total_time / 10.0;
+    	double now = SimClock.getIntTime();
+    	if ((int)(now/tenth) == counter) {
+    		System.out.println(counter + "0% of contact plan concluded (" + contacts_ready.size() + " contacts)");
+    		counter++;
+    	}
+    }
+    
+    /**
      * During simulation set the contact ending time.
      * <p>
      * When collecting the contact, we assume, that a pair of nodes must first close a contact before
@@ -77,9 +95,12 @@ public class ContactPlanHandler {
      * @param b The second node of a contact ordered alphabetically
      */
     public void set_contact_end_time(DTNHost a, DTNHost b) {
+    	if (finished) { // near end of simulation time. Contact plan already saved
+    		return; 	// this contact was already closed. return.
+    	}
 		String pair_id = (new Contact(a, b, 0.0, 1.0).pair_id());
 		if (!contact_map.containsKey(pair_id)) {
-			System.out.println("BUG: Closing a contact to which the key was not found.");
+			System.out.println("BUG: Closing a contact to which the key was not found: " + pair_id);
 			return;
 		}
 		if (contact_map.get(pair_id).end() == -1.0) {
@@ -87,7 +108,7 @@ public class ContactPlanHandler {
 		} else {	// second time added, push to the vertex map with the contact id (with begin and end time)
 			String c_id = contact_map.get(pair_id).contact_id();
 			contacts_ready.put(c_id, contact_map.get(pair_id));
-			System.out.println("Completing " + c_id);
+			output_percentage();
 			contact_map.remove(pair_id);
 		}
     }
@@ -102,6 +123,7 @@ public class ContactPlanHandler {
     		List<DTNHost> hosts = c.get_hosts();
     		set_contact_end_time(hosts.get(0), hosts.get(1));
     	}
+    	finished = true;
     }
     
     /**

@@ -63,7 +63,8 @@ public class ContactGraphRouter extends ActiveRouter {
 		super(r);
 		this_host = r.this_host;
 		setup = false;
-	}
+		create_cplan = true;
+}
 
 	/**
 	 * - Run the normal ActiveRouter update - Set create_graph option if no graph is
@@ -85,7 +86,7 @@ public class ContactGraphRouter extends ActiveRouter {
 			setup = true;
 		} 
 		if (create_cplan) { // run simulation creating contact plan
-			if (SimClock.getIntTime() >= SimScenario.getInstance().getEndTime() - 1) {
+			if (SimClock.getIntTime() == SimScenario.getInstance().getEndTime()) {
 				ContactPlanHandler.get().finish_contactplan(getHost());
 				ContactPlanHandler.get().save_contacts(getHost());
 			}
