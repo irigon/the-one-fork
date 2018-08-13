@@ -33,6 +33,12 @@ public class ContactGraphRouter extends ActiveRouter {
 	private Graph cg;
 	private RouteSearch route_search;
 	private static final String NEXT_CONTACT = "contact";
+	/** CGR router's setting namespace ({@value})*/
+	public static final String CGR_NS = "ContactGraphRouter";
+	/** CGR router's setting distance algorithm ({@value})*/
+	public static final String CGR_DISTANCE_ALGO = "Distance";
+	public static final String CGR_DEFAULT_DISTANCE_ALGO = "least_latency";
+
 
 	/**
 	 * Constructor. Creates a new message router based on the settings in the given

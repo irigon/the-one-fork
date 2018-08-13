@@ -1,5 +1,6 @@
 package routing.cgr;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -11,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import core.DTNHost;
 import core.Message;
@@ -118,7 +118,6 @@ public class RouteSearch {
 				pivot_obj_list.add(to_pivot);
 			}
 		}
-
 		return pivot_obj_list;
 	}
 	
@@ -212,14 +211,27 @@ public class RouteSearch {
 	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
 
-		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-				.filter(e -> e.get_dst_begin() < this.expire_time) // filter out far in the future vertices
-				.map(e -> vertices.get(e.get_dest_id()))
-				.filter(e -> !settled.contains(e))         // filter out already settled vertices
-				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
-				.collect(Collectors.toList());
+//		List<Vertex> neighbors = edges.get(v.get_id()).stream()
+//				.filter(e -> e.get_dst_begin() < this.expire_time) // filter out far in the future vertices
+//				.map(e -> vertices.get(e.get_dest_id()))
+//				.filter(e -> !settled.contains(e))         // filter out already settled vertices
+//				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
+//				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
+//				.collect(Collectors.toList());
 
+		List<Vertex> neighbors = new ArrayList<>();
+		neighbors = new ArrayList<>();
+		Vertex v_dst;
+		List<Edge> toDelete = new ArrayList<>();
+		for (Edge e : edges.get(v.get_id())) {
+			if (!(e.get_dst_begin() < this.expire_time)) continue;
+			v_dst = vertices.get(e.get_dest_id());
+			if (settled.contains(v_dst)) continue;
+			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
+			if (!(v_dst.current_capacity() > size)) continue;
+			neighbors.add(v_dst);
+		}
+		
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
 			if (at < n.end()) {
@@ -377,6 +389,17 @@ public class RouteSearch {
 		
 		return pivot_end;
 	}
+		
+		private double final_distance(Vertex pivot) {
+			double ret = 0.0;
+			if (pivot != null) {
+				if (predecessors.get(pivot) != null) {
+					Vertex pred = predecessors.get(pivot);
+					ret = distances.get(pred);
+				}
+			}
+			return ret;
+		}
 
 	/**
 	 * Search the best path using Dijkstra algorithm
@@ -437,6 +460,12 @@ public class RouteSearch {
 		} else {
 			System.out.println("Pivot could not be found. There is no route.");
 		}
+
+		// assert that distance to arrive at destination < expiration time
+		if (final_distance(pivot_end) > expire_time) { 
+			pivot_end = null;
+		}
+		
 		return pivot_end;
 	}
 }

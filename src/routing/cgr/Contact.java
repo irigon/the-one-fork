@@ -22,11 +22,11 @@ public class Contact {
 	private double end;
 	// Adjusted contact begin due to resource allocation
 	private double adjusted_begin;
-	private String cid;
 	private int transmission_speed;
 	private String interface_type;
 	private int hash;
-	
+	private String cid;
+
 	public Contact (DTNHost a, DTNHost b, double contactStart, double contactEnd) {
 		List<DTNHost> ordered = order(a,b);
 		host_a = ordered.get(0);
@@ -34,9 +34,9 @@ public class Contact {
 		begin = contactStart;
 		adjusted_begin = begin;
 		end = contactEnd;
-		cid = contact_id();
 		transmission_speed = calculate_transmission_speed(a, b);
 		hash = 0;
+		cid = contact_id();
 	}
 	
 	public Contact(Contact contact) {
@@ -126,7 +126,7 @@ public class Contact {
 	
 	/*TODO: do not use getString, but get_address() instead*/
 	public String pair_id() {
-		return host_a + "_" + host_b;
+		return host_a.getAddress() + "_" + host_b.getAddress();
 	}
 	
 	public DTNHost get_other_host(DTNHost x) {

@@ -16,7 +16,10 @@ import core.DTNHost;
 import core.Message;
 import core.NetworkInterface;
 import interfaces.SimpleBroadcastInterface;
+import routing.ContactGraphRouter;
 import routing.EpidemicRouter;
+import routing.MessageRouter;
+import routing.ProphetRouter;
 import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
@@ -30,14 +33,18 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 	@Override
 	public void setUp() throws Exception {
-		setRouterProto(new EpidemicRouter(ts));
+		ts.setNameSpace(null);
+		ts.putSetting(MessageRouter.B_SIZE_S, ""+BUFFER_SIZE);
+		ts.putSetting(ContactGraphRouter.CGR_NS + "." + ContactGraphRouter.CGR_DISTANCE_ALGO , 
+				ContactGraphRouter.CGR_DEFAULT_DISTANCE_ALGO+"");
+		setRouterProto(new ContactGraphRouter(ts));
 		super.setUp();
+		
 	}
 
 	/*
 	 * Reflection
 	 */
-
 	private Object get_private(String fname, RouteSearch rname)
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		Field edges_reflect = RouteSearch.class.getDeclaredField(fname);
@@ -55,7 +62,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 			blacklist.remove(h);
 		}
 		final Object[] parameters = { v, m, blacklist };
-
 		return (Vertex) method.invoke(rs, parameters);
 	}
 
@@ -64,7 +70,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		Method method = RouteSearch.class.getDeclaredMethod("prune", argClasses);
 		method.setAccessible(true);
 		final Object[] parameters = { now };
-
 		method.invoke(rs, parameters);
 	}
 
@@ -104,8 +109,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(c3, c1);
 
 		// Verify cid creation
-		assertEquals(c3.get_id(), "h10_h11_0.0_10.0");
-		assertEquals(c2.get_id(), "h10_h11_100.0_110.0");
+		assertEquals(c3.get_id(), "7_8_0.0_10.0");
+		assertEquals(c2.get_id(), "7_8_100.0_110.0");
 		assertEquals(c3.begin(), 0.0);
 		assertEquals(c3.end(), 10.0);
 		assertEquals(c2.begin(), 100.0);
@@ -188,7 +193,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	 * Vertex Tests
 	 *
 	 */
-
 	// test vertex creation
 	public void test_vertex_creation() {
 		ts.putSetting(NetworkInterface.TRANSMIT_SPEED_S, "15");
@@ -287,8 +291,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 		/*
 		 * g1 vertex graph
-		 */
-		
+		 */	
 		DTNHost src = v4.get_hosts().get(0);
 		
 		List<Object> pivot_structure = create_and_init_pivot(rs01, Arrays.asList(v4), src, true);
@@ -324,7 +327,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		/*
 		 * g2 vertex graph
 		 */
-
 		// private Vertex create_pivot_and_initialize(DTNHost h, double start_time,
 		// double end_time) {
 		// initialize_route_search(rs02, m02, 0.0, v3.get_hosts().get(0));
@@ -359,7 +361,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 */
 
 		// 1 vertex graph
-		end_pivot = rs01.search(v4.get_hosts().get(0), 0.0, m01, Integer.MAX_VALUE);
+		end_pivot = rs01.search(v4.get_hosts().get(0), 0.0, m01, TTL);
 		assertNotNull(end_pivot);
 		path = rs01.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v4);
@@ -370,13 +372,13 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 *   v3   v4
 		 *   o----o
 		 */
-		end_pivot = rs02.search(v3.get_hosts().get(0), 0.0, m02, Integer.MAX_VALUE);
+		end_pivot = rs02.search(v3.get_hosts().get(0), 0.0, m02, TTL);
 		path = rs02.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
 		assertEquals(path.get_path_as_list().get(1), v4);
 		assertEquals(path.get_path_as_list().size(), 2);
 		// 3 vertex graph
-		end_pivot = rs03.search(v3.get_hosts().get(0), 0.0, m03, Integer.MAX_VALUE);
+		end_pivot = rs03.search(v3.get_hosts().get(0), 0.0, m03, TTL);
 		path = rs03.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
 		assertEquals(path.get_path_as_list().get(1), v4);
@@ -407,18 +409,18 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 */
 		
 		Message m = new Message(hx10, hx9,  "TestMessage", 10);
-		end_pivot = rs09.search(hx10, 105.0, m, Integer.MAX_VALUE);
+		end_pivot = rs09.search(hx10, 105.0, m, TTL);
 		assertEquals(distances.get(end_pivot), 202.0); // p2_x9 has distance 281.0, pivot has p2_x9 +1
 
 		m = new Message(hx10, hx8,  "TestMessage", 10);
-		end_pivot = rs09.search(hx10, 150.0, m, Integer.MAX_VALUE);
+		end_pivot = rs09.search(hx10, 150.0, m, TTL);
 		assertEquals(distances.get(end_pivot), 252.0); 
 
-		end_pivot = rs09.search(hx10, 200.0, m, Integer.MAX_VALUE);
+		end_pivot = rs09.search(hx10, 200.0, m, TTL);
 		assertEquals(distances.get(end_pivot), 332.0); 
 
 		m = new Message(hx10, hx9,  "TestMessage", 10);
-		end_pivot = rs09.search(hx10, 205.0, m, Integer.MAX_VALUE);
+		end_pivot = rs09.search(hx10, 205.0, m, TTL);
 		assertEquals(distances.get(end_pivot), 392.0); 
 		
 	}
@@ -474,7 +476,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		List<Object> pivot_structure = create_and_init_pivot(rs05, Arrays.asList(v3), src, true);
 
 		Vertex begin_pivot = (Vertex)pivot_structure.get(0);
-		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03, Integer.MAX_VALUE);
+		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03, TTL);
 		assertNotNull(end_pivot);
 		path = rs05.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
@@ -506,7 +508,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	 */
 
 	public void test_convergence() {
-		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m06, Integer.MAX_VALUE);
+		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m06, TTL);
 		assertNotNull(end_pivot);
 		path = rs06.get_path(end_pivot);
 
@@ -529,7 +531,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 * 
 		 */
 
-		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m07, Integer.MAX_VALUE);
+		end_pivot = rs06.search(v3.get_hosts().get(0), 0.0, m07, TTL);
 		assertNotNull(end_pivot);
 		path = rs06.get_path(end_pivot);
 		assertEquals(path.get_path_as_list().get(0), v3);
@@ -641,7 +643,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	
 		Vertex result;
 		
-		result = rs10.search(h10, 120.0, m, Integer.MAX_VALUE);
+		result = rs10.search(h10, 120.0, m, TTL);
 		assertTrue(result.is_pivot());
 		assertEquals(vertices.size(), 8); // v421, v61, v42, v8, v9, v71, pivot_begin, pivot_end
 		assertEquals(edges.size(), 8); 
@@ -658,18 +660,20 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(edges.size(), 9); 
 		assertEquals(edges.get(v421.get_id()).size(), 2);
 
-		result = rs10.search(h10, 120.0, m, Integer.MAX_VALUE);
+		result = rs10.search(h10, 120.0, m, TTL);
 		assertFalse(result.is_pivot());
 		assertEquals(p.construct(result, predecessors).size(), 0);	// empty path, list with size 0
 		
 		// for a 1 sec message there should still be enough resource
 		m = new Message(h10, h12,  "TestMessage", 10);
-		result = rs10.search(h10, 120.0, m, Integer.MAX_VALUE);
+		result = rs10.search(h10, 120.0, m, TTL);
 		assertTrue(result.is_pivot());
 		assertEquals(vertices.size(), 9); 
 		assertEquals(edges.size(), 9); 
 		assertEquals(edges.get(v421.get_id()).size(), 2);
 		assertEquals(p.construct(result, predecessors).size(), 2);	// 2 vertex path: v421 --> v42
+		
+		//TODO: add the corner cases we fixed. 
 	}
 
 	
@@ -700,12 +704,113 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		Map<Vertex, Vertex> predecessors = (Map<Vertex, Vertex>) get_private("predecessors", rs09);
 		Map<String, Vertex> vertices = (Map<String, Vertex>) get_private("vertices", rs09);
 		Message m = new Message(hx10, hx9,  "TestMessage", 50);
-		end_pivot = rs09.search(hx10, 104.0, m, Integer.MAX_VALUE);
+		end_pivot = rs09.search(hx10, 104.0, m, TTL);
 		assertEquals(distances.get(end_pivot), 210.0); 
 		
 		Path p = new Path();
 		p.construct(end_pivot,  predecessors);
 		g09.consume_path(p, m, 10);
 	}
+	
+	
+	/*
+	 * BLACK BOX TESTS
+	 * 
+	 * until now most tests concentrate on dijkstra, the kernel of the path search.
+	 * Below we perform black box tests on the router.
+	 */
+	
+
+	/*
+	 * call search on an empty graph
+	 */
+	public void test_empty_graph() {
+		Message m = new Message(hx10, hx9,  "TestMessage", 50);
+		assertNull(rs00.search(hx10, 104.0, m, TTL));
+	}
+
+	/*
+	 * Send a message from a host to a destination in a graph with one node
+	 * tests:
+	 *  - [1] src, dst exist and start + resource < capacity
+	 *  - [2] src does not exist
+	 *  - [3] dst does not exist
+	 *  - [4] src and dst do not exist 
+	 *  - [5] not enough capacity
+	 *  - [6] message expires before destination receives
+	 */
+	public void test_graph_one_node_01() {
+		
+		/* [1] src, dst exist and start + resource < capacity */ 
+		
+		//vertice v4: h11 <--> h12 [20.0, 30.0]
+		Message m = new Message(h11, h12,  "TestMessage", 50);
+		Path p = new Path();
+		// enough resource, pivot returned is connected to end host (h12)
+		assertTrue(rs01.search(h11, 10.0, m, TTL).get_hosts().contains(h12));
+		assertTrue(rs01.search(h11, 20.0, m, TTL).get_hosts().contains(h12));
+		assertTrue(rs01.search(h11, 24.9, m, TTL).get_hosts().contains(h12));
+		// not enough resource, pivot returned contains start host (h11)
+		assertTrue(rs01.search(h11, 25.0, m, TTL).get_hosts().contains(h11));
+		assertTrue(rs01.search(h11, 26.0, m, TTL).get_hosts().contains(h11));
+		assertNull(rs01.search(h11, 206.0, m, TTL)); // vertex is pruned, null returned
+
+		// vertices were pruned, reconstructing graph g01
+		Map<String, Vertex> vmap01 = initialize_vmap(Arrays.asList(v4));
+		Map<String, List<Edge>> ledges01 = initialize_edges(vmap01);
+		g01 = new Graph(vmap01 , ledges01);
+		rs01 = new RouteSearch(g01);
+		/* [2] src  does not exist */
+
+		m = new Message(h10, h12,  "TestMessage", 50);
+		assertNull(rs01.search(h10, 10.0, m, TTL)); 
+
+		/* [3] dst does not exist */
+		m = new Message(h11, h13,  "TestMessage", 50);
+		assertNull(rs01.search(h11, 10.0, m, TTL)); 
+		
+		/* [4] src and dst do not exist */
+		m = new Message(h10, h13,  "TestMessage", 50);
+		assertNull(rs01.search(h10, 10.0, m, TTL)); 
+		
+		/* [5] not enough capacity, no pivot will be found, return null */
+		m = new Message(h11, h12,  "TestMessage", 110);
+		assertNull(rs01.search(h11, 10.0, m, TTL)); 
+		
+		/* [6] message expires before destination receives 
+		 * g70)
+		 * 
+		 *  cold
+		 *  x -------- e1
+		 *             \
+		 *  o --------- o
+		 *  cnew	e2	clast == v42 (120.0, 130.0)
+		 * 
+		 * 
+		 * Sending a message IN vertice v42 (h11-h12) with size 60 takes 6s,
+		 * since default speed = 10data units/s.
+		 * at time 65 and ttl 1 (60s), should cause the message to expire
+		 * at 125s, while the message should arrive at 126.
+		 * Dijkstra will return the path without verifying the TTL; this will
+		 * is verified by search, that returns null as end_pivot.
+		 */
+
+		m = new Message(h11, h12,  "TestMessage", 60);
+		// found path
+		assertNull(rs07.search(h11, 65.0, m, 1));
+	}
+	
+	/*
+	 * Send a message from a host to a destination in a graph with two nodes, with normal contacts
+	 *  - src, dst exist and start + resource < capacity --> ok
+	 *  
+	 * Same, but contacts overlap
+	 *  - src, dst exist and start + resource < capacity --> ok
+	 *  - not enough capacity for the second transfer
+	 */
+	public void test_graph_one_node_02() {
+		assert(false);
+	}
+	
 	
 }

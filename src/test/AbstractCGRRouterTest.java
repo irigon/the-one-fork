@@ -170,6 +170,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Map<String, List<Edge>> ledges04;
 	protected Map<String, List<Edge>> ledges05;
 	
+	protected Graph   g00;
 	protected Graph   g01;
 	protected Graph   g02;
 	protected Graph   g03;
@@ -192,6 +193,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Message m09;
 	protected Message m10;
 	
+	protected RouteSearch rs00;
 	protected RouteSearch rs01;
 	protected RouteSearch rs02;
 	protected RouteSearch rs03;
@@ -205,14 +207,14 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	
 	protected Path path;
 	
-	private Map<String, List<Edge>> initialize_edges(Map<String, Vertex> vmap) {
+	protected Map<String, List<Edge>> initialize_edges(Map<String, Vertex> vmap) {
 		Map<String, List<Edge>> ledges = new HashMap<>();
 		for (String vname : vmap.keySet()) {
 			ledges.put(vname, new ArrayList<>());
 		}
 		return ledges;
 	}
-	private Map<String, Vertex> initialize_vmap(List<Vertex> vertices) {
+	protected Map<String, Vertex> initialize_vmap(List<Vertex> vertices) {
 		Map<String, Vertex> vmap = new HashMap<>();
 		for (Vertex v : vertices) {
 			vmap.put(v.get_id(), v);
@@ -220,7 +222,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		return vmap;
 	}	
 	
-// if two vertex have one host in common and v1.start() < v2.end()
+/* if two vertex have one host in common and v1.start() < v2.end() */
 	private boolean connects(Vertex v1, Vertex v2) {
 		Set<DTNHost> h1set = new HashSet<DTNHost>(v1.get_hosts());
 		Set<DTNHost> h2set = new HashSet<DTNHost>(v2.get_hosts());
@@ -237,7 +239,6 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		for (Vertex v1: vertices) {
 			for (Vertex v2: vertices) {
 				if (connects(v1, v2)) {
-//					String edge_id = "edge_" + v1.get_id().substring(7) + v2.get_id().substring(6);
 					String vid = v1.get_id();
 					if (edges.get(vid) == null) {
 						edges.put(vid, new ArrayList<Edge>());
@@ -375,6 +376,15 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		m09 = new Message(v51.get_hosts().get(0), v53.get_hosts().get(1), "TestMessage", 10);
 		m10 = new Message(v51.get_hosts().get(1), v54.get_hosts().get(1), "TestMessage", 10);
 		
+		
+		/*
+		 * g0) an empty graph
+		 */
+		Map<String, Vertex> vmap00 = initialize_vmap(Arrays.asList());
+		Map<String, List<Edge>> ledges00 = initialize_edges(vmap00);
+		g00 = new Graph(vmap00 , ledges00);
+		
+		
 		/*
 		 * g1) the simplest graph with 1 vertex
 		 * 
@@ -491,6 +501,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		 *            \
 		 * o --------- o
 		 * cnew	  e2	clast
+		 * 
 		 */
 
 		Map<String, Vertex> vmap07 = initialize_vmap(Arrays.asList(v1, v21, v42));
@@ -613,6 +624,7 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		g10 = new Graph(vmap10, ledges10);   
 
 		
+		rs00 = new RouteSearch(g00);
 		rs01 = new RouteSearch(g01);
 		rs02 = new RouteSearch(g02);
 		rs03 = new RouteSearch(g03);
