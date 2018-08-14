@@ -6,10 +6,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import core.Coord;
 import core.DTNHost;
@@ -73,10 +76,10 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		method.invoke(rs, parameters);
 	}
 
-	private List<Object> create_and_init_pivot(RouteSearch rs, List<Vertex> v_to_connect, DTNHost h,
+	private List<Object> create_and_init_pivot(RouteSearch rs, SortedSet<Vertex> v_to_connect, DTNHost h,
 			boolean start) throws NoSuchMethodException, SecurityException,
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-		Class[] argClasses = { List.class, DTNHost.class, boolean.class };
+		Class[] argClasses = { SortedSet.class, DTNHost.class, boolean.class };
 		Method method = RouteSearch.class.getDeclaredMethod("create_pivot_and_initialize", argClasses);
 		method.setAccessible(true);
 		final Object[] parameters = { v_to_connect, h, start };
@@ -97,6 +100,12 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		method.invoke(rs, parameters);
 	}
 
+	public SortedSet create_sorted_set_with_node(Vertex v) {
+		SortedSet<Vertex> ss = new TreeSet<>(Comparator.comparing(Vertex::adjusted_begin).thenComparing(Vertex::get_id));
+		ss.add(v);
+		return ss;
+	}
+	
 	/*
 	 * Contact Tests
 	 */
@@ -293,8 +302,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		 * g1 vertex graph
 		 */	
 		DTNHost src = v4.get_hosts().get(0);
-		
-		List<Object> pivot_structure = create_and_init_pivot(rs01, Arrays.asList(v4), src, true);
+		List<Object> pivot_structure = create_and_init_pivot(rs01, create_sorted_set_with_node(v4), src, true);
 		Vertex pivot_begin = (Vertex)pivot_structure.get(0);
 		initialize_route_search(rs01, pivot_begin, 0.0);
 		Vertex end;
@@ -319,21 +327,24 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertEquals(distances_01.get(v4), 21.0);
 		//Vertex pivot_end = create_pivot(v4.get_receiver());
 		DTNHost hend = v4.get_hosts().get(1);
-		pivot_structure = create_and_init_pivot(rs01, Arrays.asList(v4), hend, false);
+		pivot_structure = create_and_init_pivot(rs01, create_sorted_set_with_node(v4), hend, false);
 		Vertex pivot_end = (Vertex)pivot_structure.get(0); 
 
 		assertNotNull(pivot_end);
 
 		/*
 		 * g2 vertex graph
+		 * src = h11
+		 * v3 (h10, h11, 0.0, 10.0) --> v4 (h11, h12, 20.0, 30.0)
 		 */
-		src = v3.get_hosts().get(0);
-		pivot_structure = create_and_init_pivot(rs02, Arrays.asList(v3), src, true);
+		src = h10;
+		pivot_structure = create_and_init_pivot(rs02, create_sorted_set_with_node(v3), src, true);
 		pivot_begin = (Vertex)pivot_structure.get(0);
 		initialize_route_search(rs02, pivot_begin, 0.0);
 		DTNHost common_host = v4.get_common_host(v3);
 		hend = v4.get_other_host(common_host);
-		pivot_structure = create_and_init_pivot(rs02, Arrays.asList(v4), hend, false);
+		boolean END_PIVOT=false;
+		pivot_structure = create_and_init_pivot(rs02, create_sorted_set_with_node(v4), hend, END_PIVOT);
 		pivot_end = (Vertex)pivot_structure.get(0);
 
 		// calling relax on pivot will find out vertex v3
@@ -440,7 +451,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		Map<String, List<Edge>> edges = (Map<String, List<Edge>>) get_private("edges", rs04);
 
 		DTNHost src = v5.get_hosts().get(0);
-		List<Object> pivot_structure = create_and_init_pivot(rs04, Arrays.asList(v5), src, true);
+		List<Object> pivot_structure = create_and_init_pivot(rs04, create_sorted_set_with_node(v5), src, true);
 		Vertex pivot_begin = (Vertex) pivot_structure.get(0);
 
 		assertEquals(edges.get(pivot_begin.get_id()).size(), 1);
@@ -470,7 +481,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		Map<String, List<Edge>> edges = (Map<String, List<Edge>>) get_private("edges", rs05);
 
 		DTNHost src = v3.get_hosts().get(0);
-		List<Object> pivot_structure = create_and_init_pivot(rs05, Arrays.asList(v3), src, true);
+		List<Object> pivot_structure = create_and_init_pivot(rs05, create_sorted_set_with_node(v3), src, true);
 
 		Vertex begin_pivot = (Vertex)pivot_structure.get(0);
 		end_pivot = rs05.search(v3.get_hosts().get(0), 0.0, m03, TTL);

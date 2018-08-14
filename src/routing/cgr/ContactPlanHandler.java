@@ -9,9 +9,6 @@ import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -25,7 +22,6 @@ import com.google.gson.reflect.TypeToken;
 import core.DTNHost;
 import core.SimClock;
 import core.SimScenario;
-import util.Tuple;
 
 public class ContactPlanHandler {
 
@@ -76,7 +72,7 @@ public class ContactPlanHandler {
     	double tenth = total_time / 10.0;
     	double now = SimClock.getIntTime();
     	if ((int)(now/tenth) == counter) {
-    		System.out.println(counter + "0% of contact plan concluded (" + contacts_ready.size() + " contacts)");
+    		System.out.println(counter * 10 + "% of contact plan concluded (" + contacts_ready.size() + " contacts)");
     		counter++;
     	}
     }
@@ -223,9 +219,7 @@ public class ContactPlanHandler {
 		}
     	
 		for (Vertex v1 : v_set) {
-//			if (!edges.containsKey(v1.get_id())) {
-				edges.put(v1.get_id(), new LinkedList<>());
-//			}
+			edges.put(v1.get_id(), new LinkedList<>());
 			for (Vertex v2 : v_set) {
 				if (v1.get_common_host(v2) != null && v1.begin() < v2.end()) {
 					if ( v1.get_hosts().equals(v2.get_hosts()) ) {

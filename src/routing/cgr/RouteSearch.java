@@ -98,7 +98,7 @@ public class RouteSearch {
 	 *            direction of the edge)
 	 * @return The pivot vertice
 	 */
-	private List<Object> create_pivot_and_initialize(List<Vertex> v_to_connect, DTNHost h, boolean start) {
+	private List<Object> create_pivot_and_initialize(SortedSet<Vertex> v_to_connect, DTNHost h, boolean start) {
 		List<Object> pivot_obj_list = new LinkedList<>();
 
 		Contact c = new Contact(h, h, 0.0, Double.POSITIVE_INFINITY);
@@ -220,7 +220,6 @@ public class RouteSearch {
 //				.collect(Collectors.toList());
 
 		List<Vertex> neighbors = new ArrayList<>();
-		neighbors = new ArrayList<>();
 		Vertex v_dst;
 		List<Edge> toDelete = new ArrayList<>();
 		for (Edge e : edges.get(v.get_id())) {
@@ -289,31 +288,6 @@ public class RouteSearch {
 	}
 
 	/**
-	 * Add an element ordered in the linked list (from: goo.gl/XrHdhB)
-	 * 
-	 * @param v
-	 *            Vertex to be inserted
-	 * @param ll
-	 *            Linked List
-	 */
-	private void orderedAdd(Vertex v, List<Vertex> ll) {
-		ListIterator<Vertex> itr = ll.listIterator();
-		while (true) {
-			if (itr.hasNext() == false) {
-				itr.add(v);
-				return;
-			}
-
-			Vertex elementInList = itr.next();
-			if (elementInList.adjusted_begin() > v.adjusted_begin()) {
-				itr.previous();
-				itr.add(v);
-				return;
-			}
-		}
-	}
-
-	/**
 	 * Find possible contacts for beginning and end pivots
 	 * 
 	 * @param h
@@ -324,10 +298,10 @@ public class RouteSearch {
 	 *            Message to be sent
 	 * @return Map with the list of candidates for begin pivot and end pivot
 	 */
-	private Map<String, List<Vertex>> find_contacts_of_interest(DTNHost h, double now, Message m) {
-		Map<String, List<Vertex>> candidates = new HashMap<String, List<Vertex>>();
-		candidates.put("coi_src", new LinkedList<Vertex>());
-		candidates.put("coi_dst", new LinkedList<Vertex>());
+	private Map<String, SortedSet<Vertex>> find_contacts_of_interest(DTNHost h, double now, Message m) {
+		Map<String, SortedSet<Vertex>> candidates = new HashMap<String, SortedSet<Vertex>>();
+		candidates.put("coi_src", new TreeSet<>(Comparator.comparing(Vertex::adjusted_begin).thenComparing(Vertex::get_id)));
+		candidates.put("coi_dst", new TreeSet<>(Comparator.comparing(Vertex::adjusted_begin).thenComparing(Vertex::get_id)));
 
 		for (Vertex c : vertices.values()) {
 			if (c.end() < now && c.adjusted_begin() > m.getTtl()) {
@@ -339,11 +313,10 @@ public class RouteSearch {
 			List<DTNHost> hl = c.get_hosts();
 			// contacts including current host (used for pivot_begin) with enough capacity
 			if (hl.contains(h)  && c.current_capacity() > m.getSize()) {
-				orderedAdd(c, candidates.get("coi_src"));
-				// contacts including destination host (used for pivot end)
+				candidates.get("coi_src").add(c);
 			}
 			if (hl.contains(m.getTo()) && c.current_capacity() > m.getSize()) {
-				orderedAdd(c, candidates.get("coi_dst"));
+				candidates.get("coi_dst").add(c);
 			}
 		}
 
@@ -361,9 +334,9 @@ public class RouteSearch {
 	 *            message size
 	 * @return
 	 */
-	private Vertex search_ll(Map<String, List<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host) {
-		List<Vertex> coi_src = pivot_candidates.get("coi_src");
-		List<Vertex> coi_dst = pivot_candidates.get("coi_dst");
+	private Vertex search_ll(Map<String, SortedSet<Vertex>> pivot_candidates, double now, Message m, DTNHost this_host) {
+		SortedSet<Vertex> coi_src = pivot_candidates.get("coi_src");
+		SortedSet<Vertex> coi_dst = pivot_candidates.get("coi_dst");
 
 		/* Creating pivots and edges for/from them 
 		 * p_begin / p_end is a list of Objects
@@ -416,7 +389,7 @@ public class RouteSearch {
 	 * @return pivot_end on success or null if no path was found
 	 */
 	public Vertex search(DTNHost this_host, double now, Message m, int configTtl) {
-		Map<String, List<Vertex>> pivot_candidates = new HashMap<String, List<Vertex>>();
+		Map<String, SortedSet<Vertex>> pivot_candidates = new HashMap<String, SortedSet<Vertex>>();
 		Vertex pivot_begin = null;
 		Vertex pivot_end = null;
 		/* transform the ttl (minutes) to the expiration in time (time when the message was
