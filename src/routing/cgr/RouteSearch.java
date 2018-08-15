@@ -31,16 +31,36 @@ public class RouteSearch {
 	public RouteSearch(Graph g) {
 		vertices = g.get_vertice_map();
 		edges = g.get_edges();
-		distances = new HashMap<>();
-		predecessors = new HashMap<>();
-		unsettled = new TreeSet<>(Comparator.comparing(Vertex::adjusted_begin)
-				.thenComparing(Vertex::get_id));
-		settled = new HashSet<>();
-		hops = new HashMap<>();
+		init_distances();
+		init_predecessors();
+		init_unsettled();
+		init_settled();
+		init_hops();
 		distance_measure = least_latency;
 		expire_time = Double.POSITIVE_INFINITY;
 	}
 
+	private void init_distances() {
+		this.distances = new HashMap<>();
+	}
+	
+	private void init_predecessors() {
+		this.predecessors = new HashMap<>();
+	}
+	
+	private void init_unsettled() {
+		this.unsettled = new TreeSet<>(Comparator.comparing(Vertex::adjusted_begin)
+				.thenComparing(Vertex::get_id));
+	}
+	
+	private void init_settled() {
+		settled = new HashSet<>();
+	}
+	
+	private void init_hops() {
+		hops = new HashMap<>();
+	}
+	
 	/**
 	 * 
 	 * Interface for distance functions. Most common are: least latency to the

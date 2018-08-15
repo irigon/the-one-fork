@@ -22,12 +22,23 @@ public class Graph {
 	 * @param graph original
 	 */
 	public Graph(Graph graph) {
-		if (graph == null) {
-			vertices = new HashMap<>();
-			edges = new HashMap<>();
+		init_vertices(graph);
+		init_edges(graph);
+	}
+	
+	private void init_vertices(Graph g) {
+		if (g == null) {
+			this.vertices = new HashMap<>();
 		} else {
-			vertices = new HashMap<>(makeMapCopy(graph.vertices));
-			edges = new HashMap<>(graph.edges);
+			this.vertices = new HashMap<>(makeMapCopy(g.vertices));
+		}
+	}
+	
+	private void init_edges(Graph g) {
+		if (g == null) {
+			this.edges = new HashMap<>();
+		} else {
+			edges = new HashMap<>(g.edges);
 		}
 	}
 	
