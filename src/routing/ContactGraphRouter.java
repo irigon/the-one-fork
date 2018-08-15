@@ -290,7 +290,7 @@ public class ContactGraphRouter extends ActiveRouter {
 			Vertex v = t.getKey();
 			Double value = t.getValue();
 
-			ri.addMoreInfo(new RoutingInfo(String.format("%s %s <--> %s : %.6f",
+			ri.addMoreInfo(new RoutingInfo(String.format("%s <--> %s   %s: %.6f",
 					v.get_hosts().get(0), v.get_hosts().get(1), v.get_id(), value)));
 		}
 
