@@ -5,7 +5,12 @@
 package routing;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import core.Connection;
 import core.DTNHost;
@@ -19,6 +24,7 @@ import routing.cgr.Graph;
 import routing.cgr.Path;
 import routing.cgr.RouteSearch;
 import routing.cgr.Vertex;
+import routing.util.RoutingInfo;
 import util.Tuple;
 
 /**
@@ -262,4 +268,34 @@ public class ContactGraphRouter extends ActiveRouter {
     	}
         return m;
     }
+    
+	@Override
+	public RoutingInfo getRoutingInfo() {
+		Map<Vertex, Double> distances = route_search.get_distances();
+		Comparator<Tuple<Vertex, Double>> comparator = new Comparator<Tuple<Vertex, Double>>() {
+			public int compare(Tuple<Vertex, Double> tupleA, Tuple<Vertex, Double> tupleB) {
+				return tupleA.getValue().compareTo(tupleB.getValue());
+			}
+		};
+		Set<Tuple<Vertex, Double>> ordered_set = new TreeSet<>(comparator);
+		for (Map.Entry<Vertex, Double> e : distances.entrySet()) {
+			ordered_set.add(new Tuple(e.getKey(), e.getValue()));
+		}
+
+		RoutingInfo top = super.getRoutingInfo();
+		RoutingInfo ri = new RoutingInfo(distances.size() +
+				" distance prediction(s)");
+
+		for (Tuple<Vertex, Double> t : ordered_set) {
+			Vertex v = t.getKey();
+			Double value = t.getValue();
+
+			ri.addMoreInfo(new RoutingInfo(String.format("%s %s <--> %s : %.6f",
+					v.get_hosts().get(0), v.get_hosts().get(1), v.get_id(), value)));
+		}
+
+		top.addMoreInfo(ri);
+		return top;
+	}
+
 }

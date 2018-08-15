@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -15,6 +14,7 @@ import java.util.TreeSet;
 
 import core.DTNHost;
 import core.Message;
+import util.Tuple;
 
 public class RouteSearch {
 
@@ -165,6 +165,14 @@ public class RouteSearch {
 		distances.replace(pivot_begin, now);
 		hops.replace(pivot_begin, 0);
 		unsettled.add(pivot_begin);
+	}
+	
+	/**
+	 * return the distances ordered to be displayed as routing information
+	 * @return
+	 */
+	public Map<Vertex, Double> get_distances() {
+		return this.distances;
 	}
 
 	/**
@@ -461,4 +469,5 @@ public class RouteSearch {
 		
 		return pivot_end;
 	}
+
 }
