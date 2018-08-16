@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotEquals;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -20,9 +21,7 @@ import core.Message;
 import core.NetworkInterface;
 import interfaces.SimpleBroadcastInterface;
 import routing.ContactGraphRouter;
-import routing.EpidemicRouter;
 import routing.MessageRouter;
-import routing.ProphetRouter;
 import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
@@ -33,14 +32,15 @@ import routing.cgr.Vertex;
 public class CGRRouterTest extends AbstractCGRRouterTest {
 
 	private static int TTL = 300;
+	protected static final String BSIZE_S = "bufferSize";
+
 
 	@Override
 	public void setUp() throws Exception {
 		ts.setNameSpace(null);
-		ts.putSetting(MessageRouter.B_SIZE_S, ""+BUFFER_SIZE);
 		ts.putSetting(ContactGraphRouter.CGR_NS + "." + ContactGraphRouter.CGR_DISTANCE_ALGO , 
 				ContactGraphRouter.CGR_DEFAULT_DISTANCE_ALGO+"");
-		setRouterProto(new ContactGraphRouter(ts));
+//		setRouterProto(new ContactGraphRouter(ts));
 		super.setUp();
 		
 	}
@@ -113,13 +113,12 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 		// Contacts are ordered by name
 		ts.putSetting(NetworkInterface.TRANSMIT_RANGE_S, "10.0");
-		ts.putSetting(NetworkInterface.TRANSMIT_SPEED_S, "15");
 
 		assertEquals(c3, c1);
 
 		// Verify cid creation
-		assertEquals(c3.get_id(), "7_8_0.0_10.0");
-		assertEquals(c2.get_id(), "7_8_100.0_110.0");
+		assertEquals(c3.get_id(), "0_1_0.0_10.0");
+		assertEquals(c2.get_id(), "0_1_100.0_110.0"); // ids are ordered before form the cid
 		assertEquals(c3.begin(), 0.0);
 		assertEquals(c3.end(), 10.0);
 		assertEquals(c2.begin(), 100.0);
@@ -132,9 +131,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	// Test contact transmission speed math
 
 	public void test_get_transmission_speed() {
-
-		h0.setLocation(new Coord(0.0, 0.0));
-		h1.setLocation(new Coord(0.1, 0.0));
 
 		// default transmission_speed is 10
 		assertEquals(c3.get_transmission_speed(), 10);
@@ -193,8 +189,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	}
 
 	public void test_get_other_host() {
-		Contact c3 = new Contact(h0, h1, 0.0, 10.0);
-		assertEquals(c3.get_other_host(h0), h1);
+		Contact c3 = new Contact(h10, h11, 0.0, 10.0);
+		assertEquals(c3.get_other_host(h10), h11);
 
 	}
 
@@ -805,6 +801,7 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 		m = new Message(h11, h12,  "TestMessage", 60);
 		// found path
+		m.setTtl(1);
 		assertNull(rs07.search(h11, 65.0, m, 1));
 	}
 	
@@ -839,5 +836,153 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertTrue(end_pivot.get_hosts().contains(h10));
 	}
 	
+	
+	/*
+	 * Assure that Dijkstra take in account the host destination buffer
+	 * size when calculating the shortest path
+	 */
+	public void test_not_enough_buffer_found_by_pivot() throws Exception {
+		/* c1 (h11, h10, 0.0, 10.0), c2 (h11, h10, 100.0, 110.0), c3 (h10, h11, 0.0, 10.0)
+		 * 
+		 **/
+
+		
+		ts.putSetting(ContactGraphRouter.CREATE_CPLAN, ""+false);
+		cgr = new ContactGraphRouter(ts);
+		this.utils.setMessageRouterProto(cgr);
+		core.NetworkInterface.reset();
+		core.DTNHost.reset();
+
+		DTNHost hx1 = utils.createHost(c0, "hx1"); // create hosts with cgr router
+		DTNHost hx2 = utils.createHost(c0, "hx2");
+		DTNHost hx3 = utils.createHost(c0, "hx3");
+
+		Contact cx1  = new Contact(hx2, hx1, 0.0, 10.0);
+		Contact cx2  = new Contact(hx1, hx2, 50.0, 60.0);
+		Contact cx3  = new Contact(hx2, hx3, 100.0, 110.0);
+		
+		Vertex vx1  = new Vertex("vertex_x1",  cx1,  false);
+		Vertex vx2  = new Vertex("vertex_x2",  cx2,  false);
+		Vertex vx3  = new Vertex("vertex_x3",  cx3,  false);
+		
+		Edge ex1 = new Edge(vx1, vx3);
+		Edge ex2 = new Edge(vx2, vx3);
+
+		Map<String, Vertex> vmap = initialize_vmap(Arrays.asList(vx1, vx2, vx3));
+		Map<String, List<Edge>> ledges = initialize_edges(vmap);
+		ledges.get(vx1.get_id()).add(ex1);  
+		ledges.get(vx2.get_id()).add(ex2);
+		
+		Graph g = new Graph(vmap, ledges);
+		
+		ContactGraphRouter cgr_tmp;
+
+		List<RouteSearch> lrs = new ArrayList<>();// rs1, rs2, rs3;
+		for (DTNHost h : Arrays.asList(hx1, hx2, hx3)) {
+			cgr_tmp = (ContactGraphRouter) h.getRouter();
+			lrs.add(new RouteSearch(g));
+			cgr_tmp.set_route_search(lrs.get(lrs.size()-1));			
+		}
+		
+		assertEquals(mc.TYPE_NONE, mc.getLastType());
+		
+		Message mx1 = new Message(vx1.get_hosts().get(0), vx3.get_hosts().get(1), "TestMessage1", 70);
+		Message mx2 = new Message(vx2.get_hosts().get(0), vx3.get_hosts().get(1), "TestMessage2", 70);
+		
+
+		hx1.createNewMessage(mx1);
+		assertTrue(mc.next());
+		assertEquals(mc.TYPE_CREATE, mc.getLastType());
+		assertEquals(mc.getLastFrom(), hx1);
+		assertEquals(mc.getLastTo(), hx3);
+
+		hx1.createNewMessage(mx2);
+		// In pivot creation we verify if we have the capacity, so mc.next() would return false.
+		assertFalse(mc.next());
+		
+		assertEquals(mc.TYPE_CREATE, mc.getLastType());
+		assertEquals(mc.getLastFrom(), hx1);
+		assertEquals(mc.getLastTo(), hx3);		
+	}
+	
+	public void test_not_enough_buffer_found_on_relax_phase() throws Exception {
+		/* c1 (hx1, hx2, 0.0, 50.0), 	capacity: 50*10 == 500
+		 * c2 (hx2, hx3, 100.0, 150.0), 
+		 * c3 (hx3, hx4, 200.0, 250.0)
+		 * c4 (hx3, hx5, 300.0, 350.0)
+		 * 
+		 * With connectivity speed == 10, c2 can transfer up to (5 * speed) units of data
+		 * from c1 --> c2 and 5 units from c2 --> c3. Lets say the speed == 10, so 50 bits
+		 * What if h12 buffer supports just 20?
+		 * hx1.bufferSize == 100
+		 * hx2.bufferSize == 100
+		 * hx3.bufferSize == 100
+		 * hx4.bufferSize == 100
+		 * 
+		 **/
+
+		ts.putSetting(ContactGraphRouter.CREATE_CPLAN, ""+false);
+		ts.putSetting(BSIZE_S, ""+BUFFER_SIZE);
+		cgr = new ContactGraphRouter(ts);
+		this.utils.setMessageRouterProto(cgr);
+		core.NetworkInterface.reset();
+		core.DTNHost.reset();
+
+		DTNHost hx1 = utils.createHost(c0, "hx1"); // create hosts with cgr router
+		DTNHost hx2 = utils.createHost(c0, "hx2");
+		DTNHost hx3 = utils.createHost(c0, "hx3");
+		DTNHost hx4 = utils.createHost(c0, "hx4");
+		DTNHost hx5 = utils.createHost(c0, "hx5");
+		
+		List <DTNHost> all_hosts = Arrays.asList(hx1, hx2, hx3, hx4, hx5);
+
+		Contact cx1  = new Contact(hx1, hx2, 0.0, 50.0);
+		Contact cx2  = new Contact(hx2, hx3, 100.0, 150.0);
+		Contact cx3  = new Contact(hx3, hx4, 200.0, 250.0);
+		Contact cx4  = new Contact(hx3, hx5, 300.0, 350.0);
+		
+		Vertex vx1  = new Vertex("vertex_x1",  cx1,  false);
+		Vertex vx2  = new Vertex("vertex_x2",  cx2,  false);
+		Vertex vx3  = new Vertex("vertex_x3",  cx3,  false);
+		Vertex vx4  = new Vertex("vertex_x4",  cx4,  false);
+		
+		Edge ex1 = new Edge(vx1, vx2);
+		Edge ex2 = new Edge(vx2, vx3);
+		Edge ex3 = new Edge(vx2, vx4);
+
+		Map<String, Vertex> vmap = initialize_vmap(Arrays.asList(vx1, vx2, vx3, vx4));
+		Map<String, List<Edge>> ledges = initialize_edges(vmap);
+		ledges.get(vx1.get_id()).add(ex1);  
+		ledges.get(vx2.get_id()).add(ex2);  
+		ledges.get(vx2.get_id()).add(ex3);
+		
+		Graph g = new Graph(vmap, ledges);
+		
+		ContactGraphRouter cgr_tmp;
+
+		List<RouteSearch> lrs = new ArrayList<>();// rs1, rs2, rs3;
+		for (DTNHost h : Arrays.asList(hx1, hx2, hx3, hx4)) {
+			cgr_tmp = (ContactGraphRouter) h.getRouter();
+			lrs.add(new RouteSearch(g));
+			cgr_tmp.set_route_search(lrs.get(lrs.size()-1));			
+		}
+		
+		assertEquals(mc.TYPE_NONE, mc.getLastType());
+		
+		Message mx1 = new Message(hx2, hx4, "TestMessage1", 70);
+		Message mx2 = new Message(hx1, hx5, "TestMessage2", 70);
+		
+
+		hx2.createNewMessage(mx1);
+		assertTrue(mc.next());
+		assertEquals(mc.TYPE_CREATE, mc.getLastType());
+		assertEquals(mc.getLastFrom(), hx2);
+		assertEquals(mc.getLastTo(), hx4);
+		
+		hx1.createNewMessage(mx2);
+		// Host hx3 is out of buffer capacity, there should be no way to send the message
+		assertFalse(mc.next());
+		
+	}
 	
 }

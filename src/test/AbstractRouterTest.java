@@ -52,6 +52,7 @@ public abstract class AbstractRouterTest extends TestCase {
 		mc.reset();
 		this.clock = SimClock.getInstance();
 		clock.setTime(0);
+		ts.setNameSpace(TestUtils.IFACE_NS);
 
 		List<MessageListener> ml = new ArrayList<MessageListener>();
 		ml.add(mc);

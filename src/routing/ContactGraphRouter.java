@@ -5,7 +5,6 @@
 package routing;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -39,11 +38,14 @@ public class ContactGraphRouter extends ActiveRouter {
 	private Graph cg;
 	private RouteSearch route_search;
 	private static final String NEXT_CONTACT = "contact";
+	private static final String STARTING_TIME = "starting_time";
 	/** CGR router's setting namespace ({@value})*/
 	public static final String CGR_NS = "ContactGraphRouter";
 	/** CGR router's setting distance algorithm ({@value})*/
 	public static final String CGR_DISTANCE_ALGO = "Distance";
 	public static final String CGR_DEFAULT_DISTANCE_ALGO = "least_latency";
+	/* avoid create plan on testing */
+	public static final String CREATE_CPLAN = "create_cplan";
 
 
 	/**
@@ -57,6 +59,11 @@ public class ContactGraphRouter extends ActiveRouter {
 		super(s);
 		this_host = getHost();
 		setup = false;
+		if (s.contains(CREATE_CPLAN)) {
+			create_cplan = s.getBoolean(CREATE_CPLAN);
+		} else {
+			create_cplan = true;
+		}
 	}
 
 	/**
@@ -69,9 +76,19 @@ public class ContactGraphRouter extends ActiveRouter {
 		super(r);
 		this_host = r.this_host;
 		setup = false;
-		create_cplan = true;
+		create_cplan = r.create_cplan;
+		cg = new Graph(cg);
+		route_search = new RouteSearch(cg);
 }
 
+	
+	/*TODO: find a way to allow to set route_search method for testing without using 
+	 * public visibility
+	 * */
+	public void set_route_search(RouteSearch rs) {
+		this.route_search = rs;
+	}
+	
 	/**
 	 * - Run the normal ActiveRouter update - Set create_graph option if no graph is
 	 * available - Load graph otherwise
@@ -85,7 +102,7 @@ public class ContactGraphRouter extends ActiveRouter {
 			if (ContactPlanHandler.get().has_contact_plan()) {
 				create_cplan = false;
 				cg = ContactPlanHandler.get().load_graph();
-				route_search = new RouteSearch(cg);
+				set_route_search(new RouteSearch(cg));
 			} else {
 				create_cplan = true;
 			}
@@ -175,6 +192,7 @@ public class ContactGraphRouter extends ActiveRouter {
 		}
 	}
 
+	
 	private Message tryMessageToConnection(Connection con, Message m, int next_hop_addr) {
 		int peer_addr = con.getOtherNode(getHost()).getAddress();
 		if (peer_addr == next_hop_addr) {
@@ -200,6 +218,12 @@ public class ContactGraphRouter extends ActiveRouter {
 		for (int i = 0, n = messages.size(); i < n; i++) {
 			Message m = messages.get(i);
 			int next_hop_addr = (int) m.getProperty(NEXT_CONTACT);
+			double starting_time = (double) m.getProperty(STARTING_TIME);
+			// the message is scheduled for later on. Sending now could cause a buffered message
+			// to be deleted before sent
+			if (SimClock.getTime() < starting_time) {
+				return null;
+			}
 			for (Connection c : connections) {
 				if (tryMessageToConnection(c, m, next_hop_addr) != null) {
 					return c;
@@ -217,11 +241,15 @@ public class ContactGraphRouter extends ActiveRouter {
 		return false;
 	}
 
-	void set_message_next_hop(Message m, int address) {
+	void set_message_next_hop(Message m, int address, double start_time) {
 		if (m.getProperty(NEXT_CONTACT) != null)
 			m.updateProperty(NEXT_CONTACT, address);
 		else
 			m.addProperty(NEXT_CONTACT, address);
+		if (m.getProperty(STARTING_TIME) != null)
+			m.updateProperty(STARTING_TIME, start_time);
+		else
+			m.addProperty(STARTING_TIME, start_time);
 	}
 
 	/**
@@ -234,7 +262,7 @@ public class ContactGraphRouter extends ActiveRouter {
 	 */
 	boolean isMessageDeliverable(Message m) {
 		boolean result = false;
-		double now = SimClock.getIntTime();
+		double now = SimClock.getTime();
 		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
 		if (last_hop == null) {
 			return false;
@@ -243,7 +271,8 @@ public class ContactGraphRouter extends ActiveRouter {
 		List<Vertex> path_list = path.get_path_as_list();
 		if (path_list.size() > 0) {
 			DTNHost next_hop = path_list.get(0).get_other_host(getHost());
-			set_message_next_hop(m, next_hop.getAddress());
+			double start_time = Math.max(now, path_list.get(0).adjusted_begin());
+			set_message_next_hop(m, next_hop.getAddress(), start_time);
 			cg.consume_path(path, m, 0.01);
 			result = true;
 		}
@@ -269,6 +298,12 @@ public class ContactGraphRouter extends ActiveRouter {
         return m;
     }
     
+    
+    /*
+     * (?) verify if using OrderedSet instead of HashMap for distances would improve 
+     * performance; This way, the least distances would be tried first and distances later than
+     * TTL would be skipped at once.
+     */
 	@Override
 	public RoutingInfo getRoutingInfo() {
 		Map<Vertex, Double> distances = route_search.get_distances();

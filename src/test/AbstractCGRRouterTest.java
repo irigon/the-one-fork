@@ -8,8 +8,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import core.Coord;
 import core.DTNHost;
 import core.Message;
+import core.MessageListener;
+import core.NetworkInterface;
+import junit.framework.TestCase;
+import routing.ContactGraphRouter;
+import routing.MessageRouter;
 import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
@@ -17,8 +23,18 @@ import routing.cgr.Path;
 import routing.cgr.RouteSearch;
 import routing.cgr.Vertex;
 
-public class AbstractCGRRouterTest extends AbstractRouterTest {
+public class AbstractCGRRouterTest extends TestCase {
 	
+	private static final int TTL = 300;
+	private static final int TRANSMIT_SPEED = 10;
+	protected static final int BUFFER_SIZE = 100;
+	protected ContactGraphRouter cgr;
+	protected static TestSettings ts = new TestSettings();
+	protected TestUtils utils;
+	protected Coord c0 = new Coord(0,0);
+	protected MessageChecker mc;
+
+
 	protected DTNHost h10;
 	protected DTNHost h11;
 	protected DTNHost h12;
@@ -154,6 +170,8 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Edge    e64;
 	protected Edge    e71;
 	protected Edge    e72;
+	protected Edge    e81;
+	protected Edge    e82;
 	
 	protected Map<String, List<Edge>> edge_map01;
 
@@ -192,6 +210,8 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	protected Message m08;
 	protected Message m09;
 	protected Message m10;
+	protected Message m11;
+	protected Message m12;
 	
 	protected RouteSearch rs00;
 	protected RouteSearch rs01;
@@ -253,6 +273,23 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 	@Override
 	public void setUp() throws Exception {
 		super.setUp();
+		this.mc = new MessageChecker();
+		mc.reset();
+
+		List<MessageListener> ml = new ArrayList<MessageListener>();
+		ml.add(mc);
+		
+		ts.putSetting(MessageRouter.MSG_TTL_S, ""+TTL);
+		ts.setNameSpace(TestUtils.IFACE_NS);
+		ts.putSetting(NetworkInterface.TRANSMIT_SPEED_S, ""+TRANSMIT_SPEED);
+
+		this.utils = new TestUtils(null,ml,ts);
+		
+		core.NetworkInterface.reset();
+		core.DTNHost.reset();
+
+
+
 
 		h10 = utils.createHost(c0, "h10");
 		h11 = utils.createHost(c0, "h11");
@@ -363,6 +400,8 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		e64 = new Edge(v421, v42);
 		e71 = new Edge(v42, v8);
 		e72 = new Edge(v42, v9);
+		e81 = new Edge(v1, v21);
+		e82 = new Edge(v3, v21);
 		
 		// Message from:h11 to:h12, id:"TestMessage", size: 10
 		m01 = new Message(v4.get_hosts().get(0), v4.get_hosts().get(1),  "TestMessage", 10);
@@ -375,6 +414,8 @@ public class AbstractCGRRouterTest extends AbstractRouterTest {
 		m08 = new Message(v2.get_hosts().get(0), v42.get_hosts().get(1), "TestMessage", 10);
 		m09 = new Message(v51.get_hosts().get(0), v53.get_hosts().get(1), "TestMessage", 10);
 		m10 = new Message(v51.get_hosts().get(1), v54.get_hosts().get(1), "TestMessage", 10);
+		m11 = new Message(v1.get_hosts().get(1), v21.get_hosts().get(1), "TestMessage", 70);
+		m12 = new Message(v3.get_hosts().get(0), v21.get_hosts().get(1), "TestMessage", 70);
 		
 		
 		/*

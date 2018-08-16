@@ -34,7 +34,7 @@ public class ProphetV2Router extends ActiveRouter {
 	/** delivery predictability initialization constant*/
 	public static final double PEncMax = 0.5;
 	/** typical interconnection time in seconds*/
-	public static final double I_TYP = 1800;
+	public static final double DEFAULT_I_TYP = 1800;
 	/** delivery predictability transitivity scaling constant default value */
 	public static final double DEFAULT_BETA = 0.9;
 	/** delivery predictability aging constant */
@@ -61,12 +61,21 @@ public class ProphetV2Router extends ActiveRouter {
 	 */
 	public static final String GAMMA_S = "gamma";
 
+	/**
+	 * Predictability aging constant (gamma) -setting id ({@value}).
+	 * Default value for setting is {@link #DEFAULT_GAMMA}.
+	 */
+	public static final String I_TYP_S = "typicalInterval";
+
+	
 	/** the value of nrof seconds in time unit -setting */
 	private int secondsInTimeUnit;
 	/** value of beta setting */
 	private double beta;
 	/** value of gamma setting */
 	private double gamma;
+	/** value of typicalInterval setting */
+	private double typInt;
 
 	/** delivery predictabilities */
 	private Map<DTNHost, Double> preds;
@@ -97,6 +106,11 @@ public class ProphetV2Router extends ActiveRouter {
 		}
 		else {
 			gamma = DEFAULT_GAMMA;
+		}
+		if (prophetSettings.contains(I_TYP_S)) {
+			typInt = prophetSettings.getInt(I_TYP_S);
+		} else {
+			typInt = DEFAULT_I_TYP;
 		}
 
 		initPreds();
@@ -155,9 +169,9 @@ public class ProphetV2Router extends ActiveRouter {
 		if(lastEncTime==0)
 			PEnc=PEncMax;
 		else
-			if((simTime-lastEncTime)<I_TYP)
+			if((simTime-lastEncTime)<typInt)
 			{
-				PEnc=PEncMax*((simTime-lastEncTime)/I_TYP);
+				PEnc=PEncMax*((simTime-lastEncTime)/typInt);
 			}
 			else
 				PEnc=PEncMax;

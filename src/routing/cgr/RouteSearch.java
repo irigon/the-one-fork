@@ -39,7 +39,7 @@ public class RouteSearch {
 		distance_measure = least_latency;
 		expire_time = Double.POSITIVE_INFINITY;
 	}
-
+	
 	private void init_distances() {
 		this.distances = new HashMap<>();
 	}
@@ -249,6 +249,9 @@ public class RouteSearch {
 
 		List<Vertex> neighbors = new ArrayList<>();
 		Vertex v_dst;
+		DTNHost h_dst;
+		double h_dst_capacity;
+		
 		List<Edge> toDelete = new ArrayList<>();
 		for (Edge e : edges.get(v.get_id())) {
 			if (!(e.get_dst_begin() < this.expire_time)) continue;
@@ -256,6 +259,13 @@ public class RouteSearch {
 			if (settled.contains(v_dst)) continue;
 			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
 			if (!(v_dst.current_capacity() > size)) continue;
+			// verify that the destination host has space for the new message
+			h_dst = v_dst.get_other_host(v.get_common_host(v_dst));
+			
+			// capacity taken in account the messages already planned 
+			h_dst_capacity = (v_dst.adjusted_begin() - v_dst.begin())* v_dst.get_transmission_speed();
+			
+			if (h_dst.getRouter().getFreeBufferSize() - h_dst_capacity < m.getSize()) continue;
 			neighbors.add(v_dst);
 		}
 		
@@ -424,11 +434,11 @@ public class RouteSearch {
 		*	created + original ttl
 		*/
 		if (m.getTtl() == Integer.MAX_VALUE) { // ttl not defined in msg. Get the value from config
-			this.expire_time = configTtl;
+			this.expire_time = Integer.MAX_VALUE;
 		} else { 	// ttl is configured in message
-			configTtl = m.getTtl();
+			this.expire_time = m.getTtl() * 60 + now;
 		}
-		this.expire_time = this.expire_time * 60 + now; // set the expiration time relative to the moment it was created
+//		this.expire_time = this.expire_time * 60 + now; // set the expiration time relative to the moment it was created
 		
 
 		/*
