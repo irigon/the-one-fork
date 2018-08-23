@@ -315,7 +315,6 @@ public class ProphetV2Router extends ActiveRouter {
 				}
 				if((othRouter.getPredFor(m.getTo()) >= getPredFor(m.getTo())))
 				{
-
 					messages.add(new Tuple<Message, Connection>(m,con));
 				}
 			}

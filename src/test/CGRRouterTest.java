@@ -209,21 +209,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		assertFalse(v3.is_pivot());
 	}
 
-	// test sender/receiver
-	public void test_sender_receiver() {
-		assertEquals(c3.begin(), 0.0);
-		assertEquals(c3.end(), 10.0);
-		assertNull(v3.get_receiver());
-		assertNull(v3.get_sender());
-		v3.set_receiver(h10);
-		assertEquals(v3.get_sender(), h11);
-		v3.set_receiver(h11);
-		assertEquals(v3.get_sender(), h10);
-		v3.set_sender(h10);
-		assertEquals(v3.get_receiver(), h11);
-		assertEquals(v3.get_sender(), h10);
-	}
-
 	// test is_pivot
 	public void test_is_pivot() {
 		assertFalse(v3.is_pivot());

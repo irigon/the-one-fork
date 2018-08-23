@@ -125,7 +125,6 @@ public class RouteSearch {
 		Vertex pivot = new Vertex(c.get_id(), c, true);
 		String name = c.get_id();
 		vertices.put(name, pivot);
-		pivot.set_receiver(h);
 		edges.put(pivot.get_id(), new LinkedList<>());
 		pivot_obj_list.add(pivot);
 
@@ -239,14 +238,6 @@ public class RouteSearch {
 	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
 
-//		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-//				.filter(e -> e.get_dst_begin() < this.expire_time) // filter out far in the future vertices
-//				.map(e -> vertices.get(e.get_dest_id()))
-//				.filter(e -> !settled.contains(e))         // filter out already settled vertices
-//				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-//				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
-//				.collect(Collectors.toList());
-
 		List<Vertex> neighbors = new ArrayList<>();
 		Vertex v_dst;
 		DTNHost h_dst;
@@ -277,7 +268,6 @@ public class RouteSearch {
 				} else if (at < distances.get(n)) { // improved distance
 					predecessors.replace(n, v);
 					hops.put(n, hops.get(v) + 1);
-					n.set_receiver(v.get_sender());
 					distances.replace(n, at);
 					unsettled.remove(n); // remove if present, ignore otherwise
 					unsettled.add(n);	 // (re)insert the updated value. No effect if distance is unchanged
@@ -285,7 +275,6 @@ public class RouteSearch {
 					if (hops.get(n) > hops.get(v) + 1) { // we can achieve the same vertice with less hops
 						predecessors.replace(n, v);
 						hops.put(n, hops.get(v) + 1);
-						n.set_receiver(v.get_sender());
 					}
 				}
 			}
@@ -438,8 +427,6 @@ public class RouteSearch {
 		} else { 	// ttl is configured in message
 			this.expire_time = m.getTtl() * 60 + now;
 		}
-//		this.expire_time = this.expire_time * 60 + now; // set the expiration time relative to the moment it was created
-		
 
 		/*
 		 * Choose search type: If we aim for least latency, we are interested in the
