@@ -80,9 +80,8 @@ public class Graph {
 		if((n_start + epslon * .001) < o_end) { // needs new vertices at the end
 			n_v = new Vertex(o_v, n_end, o_end);
 			vertices.put(n_v.get_id(), n_v);
-			edges.put(n_v.get_id(), new LinkedList<>());
 			for (Edge e: edges.get(o_v.get_id())) {
-				edges.get(n_v.get_id()).add(new Edge(n_v, e.get_dst_vertex()));
+				add_edge(n_v, e.get_dst_vertex());
 			}
 			// copy the edges that arrived at the original node to the new created one
 			List<Edge> to_add = new LinkedList<>();
@@ -98,6 +97,19 @@ public class Graph {
 				edges.get(e.get_src_vertex().get_id()).add(e);
 			}
 		}		
+	}
+	
+	/**
+	 * Add edge from v1 to v2
+	 * 
+	 * @param v1 Source vertex
+	 * @param v2 Destination vertex
+	 */
+	public void add_edge(Vertex v1, Vertex v2) {
+		if (edges.get(v1.get_id()) == null) {
+			edges.put(v1.get_id(), new LinkedList<>());
+		}
+		edges.get(v1.get_id()).add(new Edge(v1, v2));
 	}
 	
 	/**

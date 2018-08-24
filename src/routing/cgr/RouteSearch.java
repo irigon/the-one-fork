@@ -125,7 +125,7 @@ public class RouteSearch {
 		Vertex pivot = new Vertex(c.get_id(), c, true);
 		String name = c.get_id();
 		vertices.put(name, pivot);
-		pivot.set_receiver(h);
+//		pivot.set_receiver(h);
 		edges.put(pivot.get_id(), new LinkedList<>());
 		pivot_obj_list.add(pivot);
 
@@ -277,7 +277,6 @@ public class RouteSearch {
 				} else if (at < distances.get(n)) { // improved distance
 					predecessors.replace(n, v);
 					hops.put(n, hops.get(v) + 1);
-					n.set_receiver(v.get_sender());
 					distances.replace(n, at);
 					unsettled.remove(n); // remove if present, ignore otherwise
 					unsettled.add(n);	 // (re)insert the updated value. No effect if distance is unchanged
@@ -285,7 +284,6 @@ public class RouteSearch {
 					if (hops.get(n) > hops.get(v) + 1) { // we can achieve the same vertice with less hops
 						predecessors.replace(n, v);
 						hops.put(n, hops.get(v) + 1);
-						n.set_receiver(v.get_sender());
 					}
 				}
 			}
