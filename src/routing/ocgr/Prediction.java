@@ -1,16 +1,25 @@
 package routing.ocgr;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 import routing.cgr.Vertex;
 
 public abstract class Prediction {
 
-	double value;
-	String name;
+	private Vertex vertice; // change to private
+	private double value;
+	private String name;
 	
-	public Prediction() {
+	public Prediction(Vertex v) {
+		vertice = v;
 	}
 	
-	public abstract void update(Vertex v);
+	protected Vertex getVertex() {
+		return vertice;
+	}
+	
+	public abstract void update();
 
 	public double getValue() {
 		return value;
@@ -21,10 +30,17 @@ public abstract class Prediction {
 	}
 	
 	protected abstract void setName();
-	
+
+	protected void setValue(double val) {
+		this.value = val;
+	}
+
 	protected void setName(String name) {
 		this.name = name;
 	}
+	
+	public abstract void connUp();
+	public abstract void connDown();
 	
 	@Override
 	public String toString() {

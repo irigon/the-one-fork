@@ -1,15 +1,17 @@
 package routing.ocgr;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.management.modelmbean.InvalidTargetObjectTypeException;
 
 import core.DTNHost;
 import routing.OCGRRouter;
-import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
 import routing.cgr.Vertex;
@@ -41,8 +43,14 @@ public class Metrics {
 				graph.add_edge(peer_v, v);
 			}
 		}
-		// add capacity counter
-		addCapacity(v, new BufferSizeCapacity());
+		addMetrics(v);
+	}
+	
+	private void addMetrics(Vertex v) {
+		addCapacity(v, new BufferSizeCapacity(v));
+		addPrediction(v, new BufferFreeStdDev(v));
+		addPrediction(v, new BufferCapacityAvg(v, 20));
+		addPrediction(v, new AvgTimeBetweenContactsPrediction(v));
 	}
 	
 	/**
@@ -55,9 +63,9 @@ public class Metrics {
 		for (Vertex v : m.graph.get_vertice_map().values()) {
 			if (!graph.get_vertice_map().containsKey(v.get_id())) {
 				graph.get_vertice_map().put(v.get_id(), v);
-				addCapacity(v, new BufferSizeCapacity());
+				addCapacity(v, new BufferSizeCapacity(v));
 				for (Capacity c : capMap.get(v).values()) {
-					c.update(v);
+					c.update();
 				}
 			}
 		}
@@ -99,20 +107,27 @@ public class Metrics {
 	 * @param otherHost DTNHost peer that become within range
 	 * @throws InvalidTargetObjectTypeException 
 	 */
-	public void connUp(DTNHost thisHost, DTNHost otherHost) {
-		Contact c = new Contact (thisHost, otherHost, 0.0, 0.0);
-		String vid = "vertex_" + c.get_id();
+	public void connUp(Vertex v, DTNHost otherHost) {
 		/** If a new vertex is found, add to graph, create edges and metrics **/
-		if (!graph.get_vertice_map().containsKey(vid)) {
-			Vertex v = new Vertex(vid, c, false);
+		if (!graph.get_vertice_map().containsKey(v.get_id())) {
 			addVerticeAndEdgesToGraph(v);
 			for (Capacity cap : capMap.get(v).values()) {
-				cap.update(v);
+				cap.update();
 			}
 		}
 		/** update metrics **/
 		OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
-		extendVerticesAndEdgesToGraph(otherRouter);			
+		extendVerticesAndEdgesToGraph(otherRouter);
+		Metrics otherMetrics = otherRouter.getMetrics();
+		Map<String, Prediction> otherPredMap = otherMetrics.getPredictionsFor(v);
+		// TODO: iri assert that nodes do not get otherPredMap null after initialization
+		if (otherPredMap == null) { //other node predictions is not initialized, ignore
+			System.out.println("Ignoring not initialized map on " + otherRouter.toString());
+			return;
+		} 
+		for (Entry<String, Prediction> pred : otherPredMap.entrySet()) {
+			pred.getValue().connUp();
+		}
 	}
 
 
@@ -126,14 +141,22 @@ public class Metrics {
 	 * @param thisHost The DTNHost being executed
 	 * @param otherHost DTNHost peer that become within range
 	 */
-	public void connDown(DTNHost thisHost, DTNHost otherHost) {
-		
+	public void connDown(Vertex v, DTNHost otherHost) {
+		/** update metrics **/
+		OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
+		for (Entry<String, Prediction> pred : otherRouter.getMetrics().getPredictionsFor(v).entrySet()) {
+			pred.getValue().connDown();
+		}		
 	}
 	
 	public int size() {
 		return predMap.size() + capMap.size();
 	}
 
+	public Map<String, Prediction> getPredictionsFor(Vertex v) {
+		return predMap.get(v);
+	}
+	
 	public List<String> getMetrics(){
 		List<String> metricList = new ArrayList<String>();
 		for (Vertex v : predMap.keySet()) {

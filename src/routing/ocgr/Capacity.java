@@ -4,10 +4,12 @@ import routing.cgr.Vertex;
 
 public abstract class Capacity {
 
+	Vertex vertice;
 	private double value;
 	private String name;
 	
-	public Capacity() {
+	public Capacity(Vertex v) {
+		vertice = v;
 	}
 	
 	@Override
@@ -15,7 +17,7 @@ public abstract class Capacity {
 		return name + ": " + value;
 	}
 	
-	public abstract void update(Vertex vertice);
+	public abstract void update();
 	
 	public double getValue() {
 		return value;
@@ -33,6 +35,10 @@ public abstract class Capacity {
 
 	protected void setName(String name) {
 		this.name = name;
+	}
+	
+	protected Vertex getVertex() {
+		return vertice;
 	}
 	
 }

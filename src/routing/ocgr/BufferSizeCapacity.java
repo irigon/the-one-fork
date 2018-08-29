@@ -7,8 +7,8 @@ import routing.cgr.Vertex;
 
 public class BufferSizeCapacity extends Capacity {
 
-	public BufferSizeCapacity() {
-		super();
+	public BufferSizeCapacity(Vertex v) {
+		super(v);
 		setName();
 	}
 
@@ -21,7 +21,7 @@ public class BufferSizeCapacity extends Capacity {
 	 * probably not change during the simulation time.
 	 */
 	@Override
-	public void update(Vertex vertice) {
+	public void update() {
 		List<DTNHost> hosts = vertice.get_hosts();
 		double host1BufferSize = hosts.get(0).getRouter().getBufferSize();
 		double host2BufferSize = hosts.get(1).getRouter().getBufferSize();

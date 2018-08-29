@@ -17,6 +17,7 @@ import core.Connection;
 import core.DTNHost;
 import core.Message;
 import core.Settings;
+import routing.cgr.Contact;
 import routing.cgr.Edge;
 import routing.cgr.Graph;
 import routing.cgr.Vertex;
@@ -75,10 +76,14 @@ public class OCGRRouter extends ActiveRouter {
 		assert otherHost.getRouter() instanceof OCGRRouter :
 			"OCGRRouter only works with other routers of same type";
 
+		Contact c = new Contact (getHost(), otherHost, 0.0, 0.0);
+		String vid = "vertex_" + c.get_id();
+		Vertex v = new Vertex(vid, c, false);
+
 		if (con.isUp()) {
-			metrics.connUp(getHost(), otherHost);
+			metrics.connUp(v, otherHost);
 		} else {
-			metrics.connDown(getHost(), otherHost);			
+			metrics.connDown(v, otherHost);			
 		}
 	}
 
@@ -153,7 +158,7 @@ public class OCGRRouter extends ActiveRouter {
 				" metrics(s)");
 
 		for (String m : metrics.getMetrics()) {
-			ri.addMoreInfo(new RoutingInfo(String.format("%s", m)));
+			ri.addMoreInfo(new RoutingInfo(String.format("%s ", m)));
 		}
 
 		top.addMoreInfo(ri);
