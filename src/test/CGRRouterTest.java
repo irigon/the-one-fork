@@ -40,7 +40,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		ts.setNameSpace(null);
 		ts.putSetting(ContactGraphRouter.CGR_NS + "." + ContactGraphRouter.CGR_DISTANCE_ALGO , 
 				ContactGraphRouter.CGR_DEFAULT_DISTANCE_ALGO+"");
-//		setRouterProto(new ContactGraphRouter(ts));
 		super.setUp();
 		
 	}

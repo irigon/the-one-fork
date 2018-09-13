@@ -21,7 +21,8 @@ public class Contact {
 	private double begin;
 	private double end;
 	// Adjusted contact begin due to resource allocation
-	private double adjusted_begin;
+	private double adjusted_begin;	// pred_utilization + planned for this round
+	private double pred_utilization;
 	private int transmission_speed;
 	private String interface_type;
 	private int hash;
@@ -148,6 +149,21 @@ public class Contact {
 		return adjusted_begin;
 	}
 
+	/* needed by ocgr to capacity calculation*/
+	public void set_begin(double new_begin) {
+		this.begin = new_begin;
+	}
+
+//	public void set_pred_utilization(double t) {
+//		this.pred_utilization = t;
+//	}
+//
+//	/* return the */
+//	public double predicted_free_capacity() {
+//		double already_planned = this.adjusted_begin - this.begin;
+//		return this.end - this.pred_utilization - already_planned;
+//	}
+	
 	public void set_adjusted_begin(double new_begin) {
 		this.adjusted_begin = new_begin;
 	}

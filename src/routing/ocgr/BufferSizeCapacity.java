@@ -22,15 +22,11 @@ public class BufferSizeCapacity extends Capacity {
 	 */
 	@Override
 	public void update() {
-		List<DTNHost> hosts = vertice.get_hosts();
-		double host1BufferSize = hosts.get(0).getRouter().getBufferSize();
-		double host2BufferSize = hosts.get(1).getRouter().getBufferSize();
-		setValue(Math.min(host1BufferSize, host2BufferSize));
+		setValue(getVertex().buffer_free_capacity());
 	}
 
 	@Override
 	protected void setName() {
 		super.setName("BufferSizeCapacity");
 	}
-
 }

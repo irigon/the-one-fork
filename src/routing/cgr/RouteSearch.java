@@ -27,6 +27,12 @@ public class RouteSearch {
 	private SortedSet<Vertex> unsettled;
 	private Distance<Integer, Vertex, Vertex, Double> distance_measure;
 	private double expire_time;
+	/** Start Variables for ocgr **/
+	private double avg_capacity;
+	private double avg_frequency;
+	private final double CAP_WEIGHT  = 0.5;
+	private final double FREQ_WEIGHT = 0.5;
+	/** End Variables for ocgr **/
 
 	public RouteSearch(Graph g) {
 		vertices = g.get_vertice_map();
@@ -38,6 +44,35 @@ public class RouteSearch {
 		init_hops();
 		distance_measure = least_latency;
 		expire_time = Double.POSITIVE_INFINITY;
+		init_averages();
+		// TODO: init_variables_for_ocgr
+	}
+	
+	private void init_averages() {
+		int cap_counter = 0;
+		int freq_counter = 0;
+		double cap_sum = 0.0;
+		double freq_sum = 0.0;
+		for (Vertex v : vertices.values()) {
+			if (v.is_pivot()) {
+				continue;
+			}
+			if (v.predicted_free_capacity() > 0) {
+				cap_counter++;
+				cap_sum += v.predicted_free_capacity();
+			}
+			if (v.virtual_frequency() > 0) {
+				freq_counter++;
+				freq_sum += v.virtual_frequency();
+			}
+		}
+		avg_capacity = cap_sum / cap_counter;
+		avg_frequency = freq_sum / freq_counter;
+	}
+	
+	/* Set predictions on vertices */
+	private void init_predictions() {
+		
 	}
 	
 	private void init_distances() {
@@ -87,6 +122,27 @@ public class RouteSearch {
 	Distance<Integer, Vertex, Vertex, Double> num_hops = (size, cur, neighbor) -> {
 		return distances.get(cur) + 1.0;
 	};
+	
+	/**
+	 * TODO: Here we are basically giving importance to the capacity.
+	 * But other values should be taken in account as #hops, min latency, max frequency, etc.
+	 * This example serves to show the feasibility of the approach to the specific example in hand
+	 * 
+	 * the predicted capacity should be set on the dijkstra init function
+	 */
+	Distance<Integer, Vertex, Vertex, Double> greatest_capacity = (size, cur, neighbor) -> {
+		if (neighbor.is_pivot()) {
+			return 0.0;
+		}
+		if (neighbor.predicted_free_capacity() < size) {
+			return Double.POSITIVE_INFINITY;
+		}
+		if (neighbor.predicted_free_capacity() < 0 || neighbor.virtual_frequency() < 0) {
+			return Double.POSITIVE_INFINITY; // statistics not set yet		
+		}
+		return (avg_capacity / neighbor.predicted_free_capacity()) * CAP_WEIGHT 
+				+ (avg_frequency / neighbor.virtual_frequency()) * FREQ_WEIGHT;
+	};
 
 	/**
 	 * Define how to calculate the distance to the next hop
@@ -99,6 +155,8 @@ public class RouteSearch {
 			distance_measure = num_hops;
 		} else if (name == "least_latency") {
 			this.distance_measure = least_latency;
+		} else if (name == "fair_distribution") {
+			this.distance_measure = greatest_capacity;
 		}
 	}
 	
@@ -123,9 +181,10 @@ public class RouteSearch {
 
 		Contact c = new Contact(h, h, 0.0, Double.POSITIVE_INFINITY);
 		Vertex pivot = new Vertex(c.get_id(), c, true);
+//		pivot.set_predicted_frequency(Double.POSITIVE_INFINITY);
+//		pivot.set_virtual_capacity(Double.POSITIVE_INFINITY);
 		String name = c.get_id();
 		vertices.put(name, pivot);
-//		pivot.set_receiver(h);
 		edges.put(pivot.get_id(), new LinkedList<>());
 		pivot_obj_list.add(pivot);
 
@@ -239,20 +298,11 @@ public class RouteSearch {
 	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
 
-//		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-//				.filter(e -> e.get_dst_begin() < this.expire_time) // filter out far in the future vertices
-//				.map(e -> vertices.get(e.get_dest_id()))
-//				.filter(e -> !settled.contains(e))         // filter out already settled vertices
-//				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-//				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
-//				.collect(Collectors.toList());
-
 		List<Vertex> neighbors = new ArrayList<>();
 		Vertex v_dst;
 		DTNHost h_dst;
 		double h_dst_capacity;
 		
-		List<Edge> toDelete = new ArrayList<>();
 		for (Edge e : edges.get(v.get_id())) {
 			if (!(e.get_dst_begin() < this.expire_time)) continue;
 			v_dst = vertices.get(e.get_dest_id());
@@ -265,6 +315,7 @@ public class RouteSearch {
 			// capacity taken in account the messages already planned 
 			h_dst_capacity = (v_dst.adjusted_begin() - v_dst.begin())* v_dst.get_transmission_speed();
 			
+			// virtually reserved space (taking into account the messages that are planned to be sent)
 			if (h_dst.getRouter().getFreeBufferSize() - h_dst_capacity < m.getSize()) continue;
 			neighbors.add(v_dst);
 		}
@@ -325,6 +376,7 @@ public class RouteSearch {
 
 	/**
 	 * Find possible contacts for beginning and end pivots
+	 * TODO iri : In the ocgr variant, we ignore the start time
 	 * 
 	 * @param h
 	 *            Host in which path decision is current taking place
@@ -340,9 +392,6 @@ public class RouteSearch {
 		candidates.put("coi_dst", new TreeSet<>(Comparator.comparing(Vertex::adjusted_begin).thenComparing(Vertex::get_id)));
 
 		for (Vertex c : vertices.values()) {
-			if (c.end() < now && c.adjusted_begin() > m.getTtl()) {
-				continue;
-			}
 			if (c.is_pivot()) {
 				continue;
 			}
@@ -436,7 +485,6 @@ public class RouteSearch {
 		} else { 	// ttl is configured in message
 			this.expire_time = m.getTtl() * 60 + now;
 		}
-//		this.expire_time = this.expire_time * 60 + now; // set the expiration time relative to the moment it was created
 		
 
 		/*
@@ -456,7 +504,8 @@ public class RouteSearch {
 		 * Delete unusable vertexes fpc -- first pivot candidate, the last contact from
 		 * that started before now.
 		 */
-		prune(now);
+		//TODO: iri split prune behavior. Currently we are not prunning at all, but we should take out old contacts.
+//		prune(now);
 
 		pivot_candidates = find_contacts_of_interest(this_host, now, m);
 

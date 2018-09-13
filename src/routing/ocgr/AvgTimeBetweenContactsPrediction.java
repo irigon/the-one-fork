@@ -18,14 +18,16 @@ public class AvgTimeBetweenContactsPrediction extends Prediction {
 
 	@Override
 	public void update() {
-		double time_between_encounters = SimClock.getTime() - last_contact;
-		last_contact = SimClock.getTime();
+		double now = SimClock.getTime();
+		double time_between_encounters = now - last_contact;
+		last_contact = now;
 		// initialization
 		if (getValue() == -1.0) {
-			setValue(ContactPlanHandler.round(time_between_encounters, 2));
+			setValue(util.round(time_between_encounters, 2));
 		} else {
 			// incremental mean
-			setValue(ContactPlanHandler.round(getValue() + (getValue() - time_between_encounters) / counter, 2));			
+			double oldValue = getValue();
+			setValue(util.round(oldValue + (time_between_encounters - oldValue) / counter, 2));
 		}
 	}
 
