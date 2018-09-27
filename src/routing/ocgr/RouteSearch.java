@@ -1,4 +1,4 @@
-package routing.cgr;
+package routing.ocgr;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,7 +14,6 @@ import java.util.TreeSet;
 
 import core.DTNHost;
 import core.Message;
-import util.Tuple;
 
 public class RouteSearch {
 
@@ -220,10 +219,26 @@ public class RouteSearch {
 			distances.put(v, Double.POSITIVE_INFINITY);
 			hops.put(v, Integer.MAX_VALUE);
 			predecessors.put(v, null);
+			set_vertice_capacity();
 		}
 		distances.replace(pivot_begin, now);
 		hops.replace(pivot_begin, 0);
 		unsettled.add(pivot_begin);
+	}
+	
+	/**
+	 * We deal here with predictions.
+	 * We are interested in three prediction:
+	 * 	total size of contact (duration_prediction * speed)
+	 *  average utilization (total - freeCapacityPred)
+	 *  already planned amount for this contact (summed size of planned messages)
+	 * @param v
+	 */
+	void set_vertice_capacity(Vertex v) {
+		double buffer_cap = v.get_metrics().getPredictions().get("BufferSizeCapacity").getValue();
+		double contact_pred_size = v.get_metrics().getPredictions().get("DurationPrediction").getValue();
+		double total_contact_size = Math.min(buffer_cap, contact_pred_size * v.get_transmission_speed());
+		double avg_utilization = v.get_metrics().getPredictions()
 	}
 	
 	/**

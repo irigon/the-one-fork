@@ -1,11 +1,10 @@
-package routing.ocgr;
+package routing.ocgr.metrics;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import core.DTNHost;
-import core.SimClock;
-import routing.cgr.Vertex;
+import routing.ocgr.Vertex;
+import routing.ocgr.util;
 
 public class BufferFreeCapacityPrediction extends Prediction {
 	

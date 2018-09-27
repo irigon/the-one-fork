@@ -1,9 +1,6 @@
-package routing.ocgr;
+package routing.ocgr.metrics;
 
-import java.util.List;
-
-import core.DTNHost;
-import routing.cgr.Vertex;
+import routing.ocgr.Vertex;
 
 public class BufferSizeCapacity extends Capacity {
 

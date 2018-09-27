@@ -1,6 +1,5 @@
-package routing.cgr;
+package routing.ocgr;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,9 +7,6 @@ import java.util.Map;
 
 import core.Message;
 import routing.OCGRRouter;
-import routing.ocgr.BufferSizeCapacity;
-import routing.ocgr.Capacity;
-import routing.ocgr.Metrics;
 
 public class Graph {
 
@@ -75,6 +71,10 @@ public class Graph {
 	
 	public Map<String, Vertex> get_vertice_map() {
 		return vertices;
+	}
+	
+	public boolean has_vertice(String id) {
+		return vertices.get(id) != null;
 	}
 	
 	public Map<String, List<Edge>> get_edges() {
@@ -178,7 +178,6 @@ public class Graph {
 		for (Vertex v : otherGraph.get_vertice_map().values()) {
 			if (!vertices.containsKey(v.get_id())) {
 				addVerticeAndEdgesToGraph(v);
-				v.update_caps();
 			}
 		}
 	}

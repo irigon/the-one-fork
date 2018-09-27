@@ -1,19 +1,13 @@
-package routing.cgr;
+package routing.ocgr;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import core.DTNHost;
+import routing.MessageRouter;
 import routing.OCGRRouter;
-import routing.ocgr.AvgTimeBetweenContactsPrediction;
-import routing.ocgr.BufferFreeCapacityPrediction;
-import routing.ocgr.BufferSizeCapacity;
-import routing.ocgr.Capacity;
-import routing.ocgr.DurationPrediction;
-import routing.ocgr.Metrics;
-import routing.ocgr.Prediction;
-import routing.ocgr.TransmissionSpeed;
+import routing.ocgr.metrics.Capacity;
+import routing.ocgr.metrics.Metrics;
+import routing.ocgr.metrics.Prediction;
 
 public class Vertex {
 	
@@ -22,25 +16,28 @@ public class Vertex {
 	private boolean is_pivot;
 	/** TODO start variables for OCGR **/
 	// predicted capacity given the resource that were already allocated for this vertex
-	Map<String, Prediction> preds;
-	Map<String, Capacity> caps;
-	private double pred_utilization;
+	private Metrics metrics;
 	/** Ends variables for ocgr **/
 
 	public Vertex(String id, Contact c, boolean pivot) {
 		vid = id;
 		contact = c;
 		is_pivot = pivot;
-		init_caps();
-		init_preds();
+	}
+
+	public Vertex(String id, Contact c, Metrics m, boolean pivot) {
+		vid = id;
+		contact = c;
+		metrics = m;
+		is_pivot = pivot;
+		m.init_vertice(this);
 	}
 	
 	public Vertex(Vertex v) {
 		vid = v.vid;
 		contact = v.contact;
 		is_pivot = v.is_pivot;
-		init_caps();
-		init_preds();
+		metrics = v.metrics;
 	}
 	
 	public Vertex(Vertex v, double start, double end) {
@@ -48,37 +45,82 @@ public class Vertex {
 		contact = new Contact(hl.get(0), hl.get(1), start, end);
 		vid = "vertex_" +  contact.get_id();
 		is_pivot = v.is_pivot();
-		init_caps();
-		init_preds();
 	}
 	
-	void init_caps() {
-		caps = new HashMap<String, Capacity>();
-		addCapacity(new BufferSizeCapacity(this));
-		addCapacity(new TransmissionSpeed(this));
-	}
-
-	void init_preds() {
-		preds = new HashMap<String, Prediction>();
-		addPrediction(new BufferFreeCapacityPrediction(this));
-		addPrediction(new AvgTimeBetweenContactsPrediction(this));
-		addPrediction(new DurationPrediction(this));
+	public Metrics get_metrics() {
+		return metrics;
 	}
 	
-	void addPrediction(Prediction p) {
-		preds.put(p.getName(), p);	
+	/**
+	 * This is not a deep_copy clone
+	 * Hosts are still passed by address
+	 * 
+	 * @return a vertice with the same fields
+	 */
+	public Vertex hybrid_clone () {
+		Metrics m = Metrics.create_metrics();
+		return new Vertex(get_id(), new Contact(contact), m, false);
 	}
 	
-	void addCapacity(Capacity c) {
-		caps.put(c.getName(), c);	
-	}
-	
+//	void init_caps() {
+//		caps = new HashMap<String, Capacity>();
+//		addCapacity(new BufferSizeCapacity(this));
+//		addCapacity(new TransmissionSpeed(this));
+//	}
+//
+//	void init_preds() {
+//		preds = new HashMap<String, Prediction>();
+//		addPrediction(new BufferFreeCapacityPrediction(this));
+//		addPrediction(new AvgTimeBetweenContactsPrediction(this));
+//		addPrediction(new DurationPrediction(this));
+//	}
+//	
+//	void addPrediction(Prediction p) {
+//		preds.put(p.getName(), p);	
+//	}
+//	
+//	void addCapacity(Capacity c) {
+//		caps.put(c.getName(), c);	
+//	}
+//	
 	public void update_caps() {
-		for (Capacity cap : caps.values()) {
+		for (Capacity cap : metrics.getCapMap().values()) {
 			cap.update();
 		}
 	}
 	
+	/**
+	 * [1] Update predictions for the current contact
+	 */
+	public void connUp() {
+		/* [1]  Update predictions for the current contact */
+		for (Prediction p : metrics.getPredictions().values()) {
+			p.connUp();
+		}
+	}
+
+	public void connDown() {
+		/* [1]  Update predictions for the current contact */
+		for (Prediction p : metrics.getPredictions().values()) {
+			p.connDown();
+		}
+	}
+
+	
+	/**
+	 * Compares the timestamp 
+	 * if ov has a newer version, copy predictions
+	 * 
+	 * @param pv peer Vertice
+	 */
+	public void updatePreds(Vertex pv) {
+		double remote_timestamp = pv.get_metrics().get_timestamp();
+		if (get_metrics().get_timestamp() < remote_timestamp) {
+			metrics.transitiveUpdate(pv);
+			get_metrics().set_timestamp(remote_timestamp);
+		}
+	}
+//	
 //	public void update_preds (DTNHost otherHost) {
 //		OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
 //		extendVerticesAndEdgesToGraph(otherRouter);
@@ -158,22 +200,23 @@ public class Vertex {
 		this.contact.set_end(new_end);
 	}
 	
-	public void set_pred_utilization() {
-		double pred_trans_cap = preds.get("DurationPrediction").getValue()*get_transmission_speed();
-		pred_utilization =  Math.min(buffer_free_capacity(), pred_trans_cap);
-	}
-	
 	public double predicted_free_capacity() {
-		return pred_utilization;
+		double pred_trans_cap = metrics.getPredictions().get("DurationPrediction").getValue() *
+				get_transmission_speed();
+		return Math.min(buffer_free_capacity(), pred_trans_cap);
 	}
-
+//	
+//	public double predicted_free_capacity() {
+//		return pred_utilization;
+//	}
+//
 	public double virtual_frequency() {
-		return this.preds.get("AvgTimeBetweenContactsPred").getValue();
+		return this.metrics.getPredictions().get("AvgTimeBetweenContactsPred").getValue();
 	}
-
-	public Map<String, Prediction> get_preds(){
-		return preds;
-	}
+//
+//	public Map<String, Prediction> get_preds(){
+//		return preds;
+//	}
 	
 	@Override
 	public String toString() {

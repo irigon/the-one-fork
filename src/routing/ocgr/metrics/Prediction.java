@@ -1,9 +1,10 @@
-package routing.ocgr;
+package routing.ocgr.metrics;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import routing.cgr.Vertex;
+import core.SimClock;
+import routing.ocgr.Vertex;
 
 public abstract class Prediction {
 
@@ -19,8 +20,6 @@ public abstract class Prediction {
 		return vertice;
 	}
 	
-	public abstract void update();
-
 	public double getValue() {
 		return value;
 	}
@@ -31,7 +30,7 @@ public abstract class Prediction {
 	
 	protected abstract void setName();
 
-	protected void setValue(double val) {
+	public void setValue(double val) {
 		this.value = val;
 	}
 
@@ -39,6 +38,7 @@ public abstract class Prediction {
 		this.name = name;
 	}
 	
+	public abstract void update();
 	public abstract void connUp();
 	public abstract void connDown();
 	

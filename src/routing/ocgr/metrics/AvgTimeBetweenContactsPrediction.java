@@ -1,8 +1,8 @@
-package routing.ocgr;
+package routing.ocgr.metrics;
 
 import core.SimClock;
-import routing.cgr.ContactPlanHandler;
-import routing.cgr.Vertex;
+import routing.ocgr.Vertex;
+import routing.ocgr.util;
 
 public class AvgTimeBetweenContactsPrediction extends Prediction {
 

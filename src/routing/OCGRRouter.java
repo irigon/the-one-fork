@@ -7,7 +7,6 @@
 package routing;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,17 +17,14 @@ import core.DTNHost;
 import core.Message;
 import core.Settings;
 import core.SimClock;
-import routing.cgr.Contact;
-import routing.cgr.Edge;
-import routing.cgr.Graph;
-import routing.cgr.Path;
-import routing.cgr.RouteSearch;
-import routing.cgr.Vertex;
-import routing.ocgr.Capacity;
-import routing.ocgr.Metrics;
-import routing.ocgr.Prediction;
+import routing.ocgr.Contact;
+import routing.ocgr.Edge;
+import routing.ocgr.Graph;
+import routing.ocgr.Path;
+import routing.ocgr.RouteSearch;
+import routing.ocgr.Vertex;
+import routing.ocgr.metrics.Metrics;
 import routing.util.RoutingInfo;
-import util.Tuple;
 
 /**
  * Implementation of PRoPHETv2" router as described in
@@ -61,7 +57,6 @@ public class OCGRRouter extends ActiveRouter {
 		super(s);
 		Settings ocgrSettings = new Settings(OCGR_NS);
 		cg = createGraph();
-		metrics = new Metrics(cg);
 	}
 
 	/**
@@ -71,7 +66,6 @@ public class OCGRRouter extends ActiveRouter {
 	protected OCGRRouter(OCGRRouter r) {
 		super(r);
 		cg = new Graph(cg);
-		metrics = new Metrics(cg);
 	}
 
 	
@@ -89,33 +83,47 @@ public class OCGRRouter extends ActiveRouter {
 
 		Contact c = new Contact (getHost(), otherHost, 0.0, 0.0);
 		String vid = "vertex_" + c.get_id();
-		Vertex v = new Vertex(vid, c, false);
+		Vertex v_tmp = new Vertex(vid, c, Metrics.create_metrics(), false);
+		if (!cg.has_vertice(v_tmp.get_id())) {
+			add_vertice(v_tmp);
+		}
+		
+		Vertex v = cg.get_vertice_map().get(v_tmp.get_id());
+		v.get_metrics().set_timestamp();
 
+		assert(v != null);
+		
 		/**
 		 * When a connection is up:
-		 * 		if the node is not on the graph:
-		 * 			- add local vertex
-		 * 			- update vertex capabilities
-		 * 		search on the other router for unknown vertices
-		 * 			- add
-		 * 			- update capabilities
+		 * 		for each vertice V on the neighbors graph:
+		 * 			if V is not known locally:
+		 * 				clone vertice and add locally
+		 *			if vertice is != v:
+		 *				local_v = local_graph.get_vertice(V)
+		 *				local_v.updatePreds(V) // update newer predictions by transitivity
 		 * **/
 		if (con.isUp()) {
-			if (!cg.get_vertice_map().containsKey(v.get_id())) {
-				cg.addVerticeAndEdgesToGraph(v);
-				cg.get_vertice_map().get(v.get_id()).update_caps();
+			v.connUp();
+			/* Update graph based on vertices discovered through the peer */ 
+			OCGRRouter oR = (OCGRRouter)otherHost.getRouter();
+			Graph oG = oR.getGraph();
+			for (Vertex ov : oG.get_vertice_map().values()) {
+				/* create a vertex locally if a new vertice is found */
+				if (!cg.has_vertice(ov.get_id())) {
+					Vertex new_v = ov.hybrid_clone();
+					/* I am supposing the capacity can be calculated from the cloned vertice */
+					add_vertice(new_v);
+				}
+				// update transitively other vertices predictions if needed
+				if (!v.get_id().equals(ov.get_id())) {
+					Vertex local_vertex = cg.get_vertice_map().get(ov.get_id());
+					local_vertex.updatePreds(ov);
+				}
 			}
 			
-			/** update metrics **/
-			OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
-			cg.extendVerticesAndEdgesToGraph(otherRouter);
-
-//			for (Prediction p : cg.get_vertice_map().get(v.get_id()).get_preds().values()) {
-//				p.connUp();
-//			}			
-			metrics.connUp(v, otherHost);
+			
 		} else {
-			metrics.connDown(v, otherHost);	
+			v.connDown();
 			/** Delete transfered messages **/
 			List<Message> toDelete = new ArrayList<>();
 			for (Message m : getMessageCollection()) {
@@ -133,6 +141,25 @@ public class OCGRRouter extends ActiveRouter {
 		}
 	}
 
+	/**
+	 * Verify if the vertex v is present on the graph cg
+	 * If not, add vertice and edges and set/update capacity
+	 * 
+	 * @param v Vertice to be verified
+	 */
+	public void add_vertice(Vertex v) {
+		cg.addVerticeAndEdgesToGraph(v);
+		v.update_caps(); // capacity is updated once
+	}
+
+	public void clone_vertice_if_not_present(Vertex v) {
+		if (!cg.has_vertice(v.get_id())) {
+			cg.addVerticeAndEdgesToGraph(new Vertex(v));
+			v.update_caps(); 	    // capacity is updated once
+		}
+	}
+
+	
 	@Override
 	public void update() {
 		super.update();
@@ -159,13 +186,15 @@ public class OCGRRouter extends ActiveRouter {
 	@Override
 	public RoutingInfo getRoutingInfo() {
 		RoutingInfo top = super.getRoutingInfo();
-		RoutingInfo ri = new RoutingInfo(metrics.size() +
-				" metrics(s)");
+		RoutingInfo ri = new RoutingInfo(cg.get_vertice_map().size() +
+				" vertices");
 
-		for (String m : metrics.getMetrics()) {
-			ri.addMoreInfo(new RoutingInfo(String.format("%s ", m)));
+		for (Vertex v : cg.get_vertice_map().values()) {
+			for (String m : v.get_metrics().getMetrics()) {
+				ri.addMoreInfo(new RoutingInfo(String.format("%s ", m)));
+			}
 		}
-
+		
 		top.addMoreInfo(ri);
 		return top;
 	}
@@ -245,13 +274,13 @@ public class OCGRRouter extends ActiveRouter {
 			if (v.is_pivot()) {
 				continue;
 			}
-			Map<String, Prediction> predMap = metrics.getPredictionsFor(v);
-			if (predMap == null) { continue; }
-			
-			Prediction capPred = predMap.get("DurationPrediction");
-			if (capPred == null) { continue; }
-			
-			v.set_adjusted_begin(v.begin() + capPred.getValue());
+//			Map<String, Prediction> predMap = metrics.getPredictionsFor(v);
+//			if (predMap == null) { continue; }
+//			
+//			Prediction capPred = predMap.get("DurationPrediction");
+//			if (capPred == null) { continue; }
+//			
+//			v.set_adjusted_begin(v.begin() + capPred.getValue());
 		}
 	}
 	
@@ -267,10 +296,10 @@ public class OCGRRouter extends ActiveRouter {
 		boolean result = false;
 		double now = SimClock.getTime();
 		// just create a new RouteSearch if some vertex changed
-		if (cg.is_tainted()) {
+//		if (cg.is_tainted()) {
 			route_search = new RouteSearch(cg);
 			route_search.set_distance_algorithm("fair_distribution");			
-		}
+//		}
 
 		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
 		if (last_hop == null) {
