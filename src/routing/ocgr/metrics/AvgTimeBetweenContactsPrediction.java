@@ -29,6 +29,7 @@ public class AvgTimeBetweenContactsPrediction extends Prediction {
 			double oldValue = getValue();
 			setValue(util.round(oldValue + (time_between_encounters - oldValue) / counter, 2));
 		}
+		setTimestamp();
 	}
 
 	@Override

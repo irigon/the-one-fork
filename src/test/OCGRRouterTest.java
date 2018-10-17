@@ -5,29 +5,18 @@ import static org.junit.Assert.assertNotEquals;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import core.Coord;
 import core.DTNHost;
 import core.Message;
 import core.NetworkInterface;
-import interfaces.SimpleBroadcastInterface;
-import routing.ContactGraphRouter;
-import routing.MessageRouter;
-import routing.cgr.Contact;
-import routing.cgr.Edge;
-import routing.cgr.Graph;
-import routing.cgr.Path;
-import routing.cgr.RouteSearch;
-import routing.cgr.Vertex;
+import routing.OCGRRouter;
+import routing.ProphetRouter;
+import routing.ocgr.RouteSearch;
+import routing.ocgr.Vertex;
 
 public class OCGRRouterTest extends AbstractCGRRouterTest {
 
@@ -38,10 +27,8 @@ public class OCGRRouterTest extends AbstractCGRRouterTest {
 	@Override
 	public void setUp() throws Exception {
 		ts.setNameSpace(null);
-		ts.putSetting(ContactGraphRouter.CGR_NS + "." + ContactGraphRouter.CGR_DISTANCE_ALGO , 
-				ContactGraphRouter.CGR_DEFAULT_DISTANCE_ALGO+"");
+		setRouterProto(new OCGRRouter(ts));
 		super.setUp();
-		
 	}
 
 	/*
@@ -126,6 +113,20 @@ public class OCGRRouterTest extends AbstractCGRRouterTest {
 		// Assert hash creation
 		assertNotEquals(c3.hashCode(), 0);
 	}
-
 	
+	/**
+	 * Test Capabilities metrics
+	 * 
+	 * 1) 1 Vertice should be aware of its own capabilities
+	 * 2) 2 Vertices graph come in contact to each other
+	 * 		they must learn about their capabilities and 
+	 * 
+	 */
+	public void testCapabilities() {
+		Message m1 = new Message(h10, h11, "crew", 1);
+		h10.createNewMessage(m1);
+		
+		OCGRRouter r10 = (OCGRRouter)h10.getRouter();
+		OCGRRouter r11 = (OCGRRouter)h11.getRouter();
+	}
 }

@@ -23,6 +23,7 @@ public class BufferFreeCapacityPrediction extends Prediction {
 		double h2FreeBSize = hosts.get(1).getRouter().getFreeBufferSize();
 		double virtualCapacity = util.round(getValue()*(1-WEIGHT) + Math.min(h1FreeBSize, h2FreeBSize)*WEIGHT, 2);
 		setValue(virtualCapacity);
+		setTimestamp();
 	}
 
 	@Override

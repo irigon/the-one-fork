@@ -68,8 +68,7 @@ public class Contact {
 	 * Goes through every interface and gets the first pair of interfaces of the 
 	 * same type (compatible) that have a range wide enough to start a communication
 	 * 
-	 * WARNING: this function will just return the right value if this function is called
-	 * when both nodes in contact at the time when the method is called (on the fly)
+	 * WARNING: this function will just work if called when the nodes are in contact 
 	 * 
 	 * @param x DTNHost partner
 	 * @param y DTNHost partner

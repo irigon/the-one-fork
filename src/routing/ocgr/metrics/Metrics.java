@@ -16,12 +16,10 @@ public class Metrics {
 	Map<String, Prediction> predMap;
 	Map<String, Capacity>   capMap;
 	Vertex vertice;
-	double timestamp;
 
 	public Metrics(Map<String, Prediction> pM, Map<String, Capacity> cM) {
 		predMap = pM;
 		capMap = cM;
-		timestamp=-1.0;
 	}
 
 	public static Metrics create_metrics() {
@@ -41,17 +39,6 @@ public class Metrics {
 		}
 	}
 	
-	public double get_timestamp() {
-		return timestamp;
-	}
-	
-	public void set_timestamp() {
-		timestamp = SimClock.getTime();
-	}
-	
-	public void set_timestamp(double ts) {
-		timestamp = ts;
-	}
 	
 	/**
 	 * An new contact was found; add to the graph, create edges and metrics.
@@ -232,7 +219,11 @@ public class Metrics {
 	public void transitiveUpdate(Vertex pv) {
 		for (Prediction p : predMap.values()) {
 			Prediction remote_pred = pv.get_metrics().getPredictions().get(p.getName());
-			p.setValue(remote_pred.getValue());
+			double remote_timestamp = remote_pred.getTimestamp();
+			if (remote_timestamp < p.getTimestamp()) {
+				p.setValue(remote_pred.getValue());
+				p.setTimestamp(remote_timestamp);
+			}
 		}
 	}
 	

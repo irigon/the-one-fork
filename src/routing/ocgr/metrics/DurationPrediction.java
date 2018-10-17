@@ -18,10 +18,14 @@ public class DurationPrediction extends Prediction {
 	}
 
 	// it would be better to update at every transmission / message reception
+	// setEnd is necessary since the contacts starts with end == 0. We need to change the contact size 
+	// so the contact size can be used to verify the capacity for dijkstra.
 	@Override
 	public void update() {
-		double cap = util.round(getValue()*(1-WEIGHT) + (end-init)*WEIGHT, 2);
-		setValue(cap);
+		double duration = util.round(getValue()*(1-WEIGHT) + (end-init)*WEIGHT, 2);
+		setValue(duration);
+		super.setEnd(duration);
+		setTimestamp();
 	}
 
 	@Override

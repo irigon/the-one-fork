@@ -219,7 +219,7 @@ public class RouteSearch {
 			distances.put(v, Double.POSITIVE_INFINITY);
 			hops.put(v, Integer.MAX_VALUE);
 			predecessors.put(v, null);
-			set_vertice_capacity();
+			//set_vertice_capacity();
 		}
 		distances.replace(pivot_begin, now);
 		hops.replace(pivot_begin, 0);
@@ -328,13 +328,19 @@ public class RouteSearch {
 			h_dst = v_dst.get_other_host(v.get_common_host(v_dst));
 			
 			// capacity taken in account the messages already planned 
-			h_dst_capacity = (v_dst.adjusted_begin() - v_dst.begin())* v_dst.get_transmission_speed();
+			//h_dst_capacity = (v_dst.adjusted_begin() - v_dst.begin())* v_dst.get_transmission_speed();
+			
+			h_dst_capacity = (v_dst.end() - v_dst.adjusted_begin())* v_dst.get_transmission_speed();
 			
 			// virtually reserved space (taking into account the messages that are planned to be sent)
-			if (h_dst.getRouter().getFreeBufferSize() - h_dst_capacity < m.getSize()) continue;
+			//if (h_dst.getRouter().getFreeBufferSize() - h_dst_capacity < m.getSize()) continue;
+			if (h_dst_capacity < m.getSize()) continue;
 			neighbors.add(v_dst);
 		}
 		
+		/**
+		 * We have to change here to take in account that we don't have absolute time anymore
+		 */
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
 			if (at < n.end()) {
@@ -425,6 +431,7 @@ public class RouteSearch {
 
 	/**
 	 * Search least latency
+	 * TODO: we need to delete the pivots 
 	 * 
 	 * @param pivot_candidates:
 	 *            a list of candidates for pivot start and pivot end

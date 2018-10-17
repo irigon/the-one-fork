@@ -38,6 +38,7 @@ public class OCGRRouter extends ActiveRouter {
 
 	private static final String NEXT_CONTACT = "contact";
 	private static final String STARTING_TIME = "starting_time";
+	private boolean oldTransferState = false;
 
 
 	/** Every node has its own view of the world **/
@@ -89,7 +90,6 @@ public class OCGRRouter extends ActiveRouter {
 		}
 		
 		Vertex v = cg.get_vertice_map().get(v_tmp.get_id());
-		v.get_metrics().set_timestamp();
 
 		assert(v != null);
 		
@@ -115,7 +115,7 @@ public class OCGRRouter extends ActiveRouter {
 					add_vertice(new_v);
 				}
 				// update transitively other vertices predictions if needed
-				if (!v.get_id().equals(ov.get_id())) {
+				if (!v.get_id().equals(ov.get_id()) && !ov.is_pivot()) {
 					Vertex local_vertex = cg.get_vertice_map().get(ov.get_id());
 					local_vertex.updatePreds(ov);
 				}
@@ -163,6 +163,12 @@ public class OCGRRouter extends ActiveRouter {
 	@Override
 	public void update() {
 		super.update();
+		// if started or stop transfered, update connection prediction
+		if (changedTransferState()) {
+			// find out the vertex and update prediction
+			oldTransferState = !oldTransferState;
+		}
+		
 		if (!canStartTransfer() ||isTransferring()) {
 			return; // nothing to transfer or is currently transferring
 		}
@@ -173,6 +179,13 @@ public class OCGRRouter extends ActiveRouter {
 		}
 
 		this.tryAllMessagesToAllConnections();
+	}
+	
+	private boolean changedTransferState() {
+		if ((isTransferring() && oldTransferState == false) || (!isTransferring() && oldTransferState == true)) {
+			return true;
+		}
+		return false;
 	}
 	
 	public Metrics getMetrics() {

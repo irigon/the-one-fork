@@ -110,15 +110,10 @@ public class Vertex {
 	/**
 	 * Compares the timestamp 
 	 * if ov has a newer version, copy predictions
-	 * 
 	 * @param pv peer Vertice
 	 */
 	public void updatePreds(Vertex pv) {
-		double remote_timestamp = pv.get_metrics().get_timestamp();
-		if (get_metrics().get_timestamp() < remote_timestamp) {
-			metrics.transitiveUpdate(pv);
-			get_metrics().set_timestamp(remote_timestamp);
-		}
+		metrics.transitiveUpdate(pv);
 	}
 //	
 //	public void update_preds (DTNHost otherHost) {
