@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import core.Connection;
 import core.Coord;
 import core.DTNHost;
 import core.Message;
 import core.MessageListener;
 import core.NetworkInterface;
+import core.SimClock;
 import junit.framework.TestCase;
 import routing.ContactGraphRouter;
 import routing.MessageRouter;
@@ -30,13 +32,16 @@ public class AbstractCGRRouterTest extends TestCase {
 	private static final int TTL = 300;
 	private static final int TRANSMIT_SPEED = 10;
 	protected static final int BUFFER_SIZE = 100;
+	protected static final boolean UP = true;
+	protected static final boolean DOWN = false;
+
 	protected MessageRouter routerProto;
 	protected static TestSettings ts = new TestSettings();
 	protected TestUtils utils;
 	protected Coord c0 = new Coord(0,0);
 	protected MessageChecker mc;
-
-
+	protected SimClock clock = SimClock.getInstance();
+	
 	protected DTNHost h10;
 	protected DTNHost h11;
 	protected DTNHost h12;
@@ -276,6 +281,11 @@ public class AbstractCGRRouterTest extends TestCase {
 		this.routerProto = r;
 	}
 
+	protected void updateAllNodes() {
+		for (DTNHost node : utils.getAllHosts()) {
+			node.update(true);
+		}
+	}
 	
 	@Override
 	public void setUp() throws Exception {

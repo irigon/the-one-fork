@@ -8,12 +8,14 @@ public class AvgTimeBetweenContactsPrediction extends Prediction {
 
 	double last_contact;
 	int counter;
+	int MAX;
 	public AvgTimeBetweenContactsPrediction(Vertex v) {
 		super(v);
 		setName();
 		last_contact = -1.0;
 		counter=0;
 		setValue(-1.0);
+		MAX = 10;
 	}
 
 	@Override
@@ -39,7 +41,7 @@ public class AvgTimeBetweenContactsPrediction extends Prediction {
 	
 	@Override
 	public void connUp() {
-		counter++;
+		counter = counter < MAX ? ++counter : MAX;
 		if (last_contact == -1.0) {
 			last_contact = SimClock.getTime();
 		} else {

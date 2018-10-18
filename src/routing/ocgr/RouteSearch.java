@@ -160,7 +160,9 @@ public class RouteSearch {
 	}
 	
 	/**
-	 * Create the a pivot and add it to vertices.
+	 * Create a pivot and add it to vertices.
+	 * 
+	 * 
 	 * 
 	 * @param v_to_connect
 	 *            Vertices to which this pivot should connect to
@@ -173,33 +175,37 @@ public class RouteSearch {
 	 * @param start
 	 *            true if this is the pivot_begin false if it is end (needed for the
 	 *            direction of the edge)
-	 * @return The pivot vertice
+	 * @return The pivot vertice, with the pivot in the first place and a list of edges if the destination is a pivot
 	 */
 	private List<Object> create_pivot_and_initialize(SortedSet<Vertex> v_to_connect, DTNHost h, boolean start) {
 		List<Object> pivot_obj_list = new LinkedList<>();
 
 		Contact c = new Contact(h, h, 0.0, Double.POSITIVE_INFINITY);
 		Vertex pivot = new Vertex(c.get_id(), c, true);
-//		pivot.set_predicted_frequency(Double.POSITIVE_INFINITY);
-//		pivot.set_virtual_capacity(Double.POSITIVE_INFINITY);
 		String name = c.get_id();
-		vertices.put(name, pivot);
-		edges.put(pivot.get_id(), new LinkedList<>());
+		vertices.put(name, pivot); 
 		pivot_obj_list.add(pivot);
-
+		Edge e_pivot;
+		
 		for (Vertex v : v_to_connect) {
 			if (start) {
-				edges.get(pivot.get_id()).add(new Edge(pivot, v));
+				e_pivot = new Edge(pivot, v);
+				addEdge(pivot.get_id(), e_pivot);
 			} else {
-				Edge to_pivot = new Edge(v, pivot);
-				edges.get(v.get_id()).add(to_pivot);
-				pivot_obj_list.add(to_pivot);
+				e_pivot = new Edge(v, pivot);
+				addEdge(v.get_id(), e_pivot);
 			}
+			pivot_obj_list.add(e_pivot);
 		}
 		return pivot_obj_list;
 	}
 	
-	
+	private void addEdge(String vertex_id, Edge e) {
+		if (! edges.containsKey(vertex_id)) {
+			edges.put(vertex_id, new LinkedList<>());
+		}
+		edges.get(vertex_id).add(e);
+	}
 
 	/**
 	 * Initialize dijkstra
@@ -256,9 +262,9 @@ public class RouteSearch {
 	 *            The end pivot
 	 * @return The shortest path found
 	 */
-	public Path get_path(Vertex end_pivot) {
+	public Path get_path(Vertex last_vertice) {
 		Path p = new Path();
-		p.path = p.construct(end_pivot, predecessors);
+		p.path = p.construct(last_vertice, predecessors);
 		return p;
 	}
 
@@ -445,13 +451,14 @@ public class RouteSearch {
 		SortedSet<Vertex> coi_src = pivot_candidates.get("coi_src");
 		SortedSet<Vertex> coi_dst = pivot_candidates.get("coi_dst");
 
-		/* Creating pivots and edges for/from them 
+		/**
+		 * Creating pivots and edges for/from them 
 		 * p_begin / p_end is a list of Objects
 		 * the first object is the pivot vertex and the rest of the list 
 		 * are edges added to this pivot.
 		 * We save these edges for cleaning after search, avoiding go through the 
 		 * whole edge list.
-		 * */
+		 */
 		List<Object> p_begin = create_pivot_and_initialize(coi_src, this_host, true);
 		List<Object> p_end = create_pivot_and_initialize(coi_dst, m.getTo(), false);			
 		
@@ -459,27 +466,41 @@ public class RouteSearch {
 		blacklist.remove(this_host);
 		Vertex pivot_begin = (Vertex)p_begin.get(0);
 		Vertex pivot_end = (Vertex)p_end.get(0);
+		Vertex last_node;
 		
 		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
+
+		// set last_node to null if pivot_end == null, otherwise to its predecessor
+		last_node = pivot_end == null ? pivot_end : predecessors.get(pivot_end); 
 		
-		//cleanup edges from vertices to end_pivots
-		for (Edge e: (List<Edge>)(Object)p_end.subList(1, p_end.size())) {
+		// cleanup edges from and to pivots and the pivots themselves
+		clean_pivot(p_begin);
+		clean_pivot(p_end);
+		
+		return last_node;
+	}
+	
+	private void clean_pivot(List<Object> pivot_struct) {
+		for (Edge e: (List<Edge>)(Object)pivot_struct.subList(1, pivot_struct.size())) {
 			edges.get(e.get_src_id()).remove(e);
 		}
-		
-		return pivot_end;
-	}
-		
-		private double final_distance(Vertex pivot) {
-			double ret = 0.0;
-			if (pivot != null) {
-				if (predecessors.get(pivot) != null) {
-					Vertex pred = predecessors.get(pivot);
-					ret = distances.get(pred);
-				}
-			}
-			return ret;
+		Vertex pivot = (Vertex)pivot_struct.get(0);
+		if (edges.containsKey(pivot.get_id())) {
+			edges.remove(pivot.get_id());
 		}
+		vertices.remove(pivot.get_id());
+	}
+	
+	private double final_distance(Vertex pivot) {
+		double ret = 0.0;
+		if (pivot != null) {
+			if (predecessors.get(pivot) != null) {
+				Vertex pred = predecessors.get(pivot);
+				ret = distances.get(pred);
+			}
+		}
+		return ret;
+	}
 
 	/**
 	 * Search the best path using Dijkstra algorithm
@@ -498,7 +519,7 @@ public class RouteSearch {
 	public Vertex search(DTNHost this_host, double now, Message m, int configTtl) {
 		Map<String, SortedSet<Vertex>> pivot_candidates = new HashMap<String, SortedSet<Vertex>>();
 		Vertex pivot_begin = null;
-		Vertex pivot_end = null;
+		Vertex last_node = null;
 		/* transform the ttl (minutes) to the expiration in time (time when the message was
 		*	created + original ttl
 		*/
@@ -536,17 +557,17 @@ public class RouteSearch {
 
 		if (start_candidates_size > 0 && end_candidates_size > 0) {
 			// least latency:
-			pivot_end = search_ll(pivot_candidates, now, m, this_host);
+			last_node = search_ll(pivot_candidates, now, m, this_host);
 		} else {
 			System.out.println("Pivot could not be found. There is no route.");
 		}
 
 		// assert that distance to arrive at destination < expiration time
-		if (final_distance(pivot_end) > expire_time) { 
-			pivot_end = null;
+		if (final_distance(last_node) > expire_time) { 
+			last_node = null;
 		}
 		
-		return pivot_end;
+		return last_node;
 	}
 
 }

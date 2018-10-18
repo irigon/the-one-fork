@@ -9,12 +9,14 @@ public class DurationPrediction extends Prediction {
 	double WEIGHT = 0.2;
 	double init;
 	double end;
+	boolean startup;
 
 	public DurationPrediction(Vertex v) {
 		super(v);
 		setName();
 		init = Double.NaN;
 		end = Double.NaN;
+		startup = true;
 	}
 
 	// it would be better to update at every transmission / message reception
@@ -22,7 +24,13 @@ public class DurationPrediction extends Prediction {
 	// so the contact size can be used to verify the capacity for dijkstra.
 	@Override
 	public void update() {
-		double duration = util.round(getValue()*(1-WEIGHT) + (end-init)*WEIGHT, 2);
+		double duration;
+		if (startup) {
+			duration = util.round(end-init, 2);
+			startup = false;
+		} else {
+			duration = util.round(getValue()*(1-WEIGHT) + (end-init)*WEIGHT, 2);
+		}
 		setValue(duration);
 		super.setEnd(duration);
 		setTimestamp();

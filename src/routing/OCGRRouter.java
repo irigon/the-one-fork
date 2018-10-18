@@ -120,8 +120,6 @@ public class OCGRRouter extends ActiveRouter {
 					local_vertex.updatePreds(ov);
 				}
 			}
-			
-			
 		} else {
 			v.connDown();
 			/** Delete transfered messages **/
@@ -309,19 +307,17 @@ public class OCGRRouter extends ActiveRouter {
 		boolean result = false;
 		double now = SimClock.getTime();
 		// just create a new RouteSearch if some vertex changed
-//		if (cg.is_tainted()) {
-			route_search = new RouteSearch(cg);
-			route_search.set_distance_algorithm("fair_distribution");			
-//		}
+		route_search = new RouteSearch(cg);
+		route_search.set_distance_algorithm("fair_distribution");			
 
 		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
-		if (last_hop == null) {
-			reset_capacity();
-			last_hop = route_search.search(getHost(), now, m, msgTtl);
-			if (last_hop == null) {
-				return false;				
-			}
-		}
+//		if (last_hop == null) {
+//			reset_capacity();
+//			last_hop = route_search.search(getHost(), now, m, msgTtl);
+//			if (last_hop == null) {
+//				return false;				
+//			}
+//		}
 		Path path = route_search.get_path(last_hop);
 		List<Vertex> path_list = path.get_path_as_list();
 		if (path_list.size() > 0) {

@@ -13,16 +13,17 @@ public class BufferFreeCapacityPrediction extends Prediction {
 	public BufferFreeCapacityPrediction(Vertex v) {
 		super(v);
 		setName();
+		setValue(-1.0);
 	}
 
 	// it would be better to update at every transmission / message reception
 	@Override
 	public void update() {
-		List<DTNHost> hosts = getVertex().get_hosts();
-		double h1FreeBSize = hosts.get(0).getRouter().getFreeBufferSize();
-		double h2FreeBSize = hosts.get(1).getRouter().getFreeBufferSize();
-		double virtualCapacity = util.round(getValue()*(1-WEIGHT) + Math.min(h1FreeBSize, h2FreeBSize)*WEIGHT, 2);
-		setValue(virtualCapacity);
+		double virtualCapacity= getVertex().buffer_free_capacity();
+		if (getValue() != -1.0) {
+			virtualCapacity = getValue()*(1-WEIGHT) + virtualCapacity*WEIGHT;
+		}
+		setValue(util.round(virtualCapacity, 2));
 		setTimestamp();
 	}
 
@@ -33,10 +34,10 @@ public class BufferFreeCapacityPrediction extends Prediction {
 
 	@Override
 	public void connUp() {
+		update();
 	}
 
 	@Override
 	public void connDown() {
-		update();
 	}
 }
