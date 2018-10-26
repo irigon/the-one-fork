@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import core.Message;
+import core.SimClock;
 import routing.OCGRRouter;
 
 public class Graph {
@@ -129,11 +130,9 @@ public class Graph {
 	
 	/**
 	 * Update the channel capacity through path p for message m.
-	 * Contacts smaller than epslon (milliseconds) are discarded
-	 * 
-	 * A contact is consumed by increasing the amount of time to its adjusted_begin
-	 * edges are not changed
-	 * 
+     * 
+     * Add to every vertice in the path the timestamp and msg size 
+     * 
 	 * ps.: The capacity should have been taking in account in the shortest path calculation.
 	 * therefore, if the path do not support the message size, we have a bug.
 	 * @param p	Path returned from RouteSearch
@@ -150,11 +149,12 @@ public class Graph {
 		List<Vertex> path_as_list = p.get_path_as_list();
 		List<Vertex> fragmented_vertices = new LinkedList<>();
 		
+		double now = SimClock.getTime();
 		for (Vertex v : path_as_list) {
-			comm_start = v.adjusted_begin(); // time when transmission takes place
-			// TODO: iri move the round function to another place, together with a contains for tuple
-			comm_ends = ContactPlanHandler.round(comm_start + (double)msize/v.get_transmission_speed(), 2); 
-			v.set_adjusted_begin(comm_ends);
+			v.add_data(now, m.getSize());
+			//comm_start = v.adjusted_begin(); // time when transmission takes place
+			//comm_ends = ContactPlanHandler.round((double)msize/v.get_transmission_speed(), 2); 
+			//v.set_adjusted_begin(comm_ends);
 		}
 	}
 	

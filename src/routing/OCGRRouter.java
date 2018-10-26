@@ -285,13 +285,6 @@ public class OCGRRouter extends ActiveRouter {
 			if (v.is_pivot()) {
 				continue;
 			}
-//			Map<String, Prediction> predMap = metrics.getPredictionsFor(v);
-//			if (predMap == null) { continue; }
-//			
-//			Prediction capPred = predMap.get("DurationPrediction");
-//			if (capPred == null) { continue; }
-//			
-//			v.set_adjusted_begin(v.begin() + capPred.getValue());
 		}
 	}
 	
@@ -308,16 +301,10 @@ public class OCGRRouter extends ActiveRouter {
 		double now = SimClock.getTime();
 		// just create a new RouteSearch if some vertex changed
 		route_search = new RouteSearch(cg);
-		route_search.set_distance_algorithm("fair_distribution");			
+		route_search.set_distance_algorithm("least_latency");			
+//		route_search.set_distance_algorithm("min_hops");			
 
 		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
-//		if (last_hop == null) {
-//			reset_capacity();
-//			last_hop = route_search.search(getHost(), now, m, msgTtl);
-//			if (last_hop == null) {
-//				return false;				
-//			}
-//		}
 		Path path = route_search.get_path(last_hop);
 		List<Vertex> path_list = path.get_path_as_list();
 		if (path_list.size() > 0) {

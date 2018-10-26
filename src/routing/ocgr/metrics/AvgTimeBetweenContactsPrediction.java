@@ -9,12 +9,13 @@ public class AvgTimeBetweenContactsPrediction extends Prediction {
 	double last_contact;
 	int counter;
 	int MAX;
+	final double INI_VAL = Double.POSITIVE_INFINITY;
 	public AvgTimeBetweenContactsPrediction(Vertex v) {
 		super(v);
 		setName();
-		last_contact = -1.0;
+		last_contact = INI_VAL;
 		counter=0;
-		setValue(-1.0);
+		setValue(INI_VAL);
 		MAX = 10;
 	}
 
@@ -24,7 +25,7 @@ public class AvgTimeBetweenContactsPrediction extends Prediction {
 		double time_between_encounters = now - last_contact;
 		last_contact = now;
 		// initialization
-		if (getValue() == -1.0) {
+		if (getValue() == INI_VAL) {
 			setValue(util.round(time_between_encounters, 2));
 		} else {
 			// incremental mean
@@ -42,7 +43,7 @@ public class AvgTimeBetweenContactsPrediction extends Prediction {
 	@Override
 	public void connUp() {
 		counter = counter < MAX ? ++counter : MAX;
-		if (last_contact == -1.0) {
+		if (last_contact == INI_VAL) {
 			last_contact = SimClock.getTime();
 		} else {
 			update();

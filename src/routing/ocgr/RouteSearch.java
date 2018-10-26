@@ -60,9 +60,9 @@ public class RouteSearch {
 				cap_counter++;
 				cap_sum += v.predicted_free_capacity();
 			}
-			if (v.virtual_frequency() > 0) {
+			if (v.pred_time_between_contacts() > 0) {
 				freq_counter++;
-				freq_sum += v.virtual_frequency();
+				freq_sum += v.pred_time_between_contacts();
 			}
 		}
 		avg_capacity = cap_sum / cap_counter;
@@ -115,11 +115,11 @@ public class RouteSearch {
 
 	Distance<Integer, Vertex, Vertex, Double> least_latency = (size, cur, neighbor) -> {
 		double neighbor_transmission_time = (double) size / neighbor.get_transmission_speed();
-		return Math.max(distances.get(cur), neighbor.adjusted_begin()) + neighbor_transmission_time;
+		return neighbor.is_pivot() ? 0.0 : neighbor.pred_time_between_contacts() + neighbor_transmission_time;
 	};
 
 	Distance<Integer, Vertex, Vertex, Double> num_hops = (size, cur, neighbor) -> {
-		return distances.get(cur) + 1.0;
+		return neighbor.is_pivot() ? 0.0 : distances.get(cur) + 1.0;
 	};
 	
 	/**
@@ -136,11 +136,11 @@ public class RouteSearch {
 		if (neighbor.predicted_free_capacity() < size) {
 			return Double.POSITIVE_INFINITY;
 		}
-		if (neighbor.predicted_free_capacity() < 0 || neighbor.virtual_frequency() < 0) {
+		if (neighbor.predicted_free_capacity() < 0 || neighbor.pred_time_between_contacts() < 0) {
 			return Double.POSITIVE_INFINITY; // statistics not set yet		
 		}
 		return (avg_capacity / neighbor.predicted_free_capacity()) * CAP_WEIGHT 
-				+ (avg_frequency / neighbor.virtual_frequency()) * FREQ_WEIGHT;
+				+ (avg_frequency / neighbor.pred_time_between_contacts()) * FREQ_WEIGHT;
 	};
 
 	/**
@@ -191,11 +191,11 @@ public class RouteSearch {
 			if (start) {
 				e_pivot = new Edge(pivot, v);
 				addEdge(pivot.get_id(), e_pivot);
+				pivot_obj_list.add(e_pivot);
 			} else {
 				e_pivot = new Edge(v, pivot);
 				addEdge(v.get_id(), e_pivot);
 			}
-			pivot_obj_list.add(e_pivot);
 		}
 		return pivot_obj_list;
 	}
@@ -225,6 +225,7 @@ public class RouteSearch {
 			distances.put(v, Double.POSITIVE_INFINITY);
 			hops.put(v, Integer.MAX_VALUE);
 			predecessors.put(v, null);
+			v.update_ecc();
 			//set_vertice_capacity();
 		}
 		distances.replace(pivot_begin, now);
@@ -244,7 +245,7 @@ public class RouteSearch {
 		double buffer_cap = v.get_metrics().getPredictions().get("BufferSizeCapacity").getValue();
 		double contact_pred_size = v.get_metrics().getPredictions().get("DurationPrediction").getValue();
 		double total_contact_size = Math.min(buffer_cap, contact_pred_size * v.get_transmission_speed());
-		double avg_utilization = v.get_metrics().getPredictions()
+//		double avg_utilization = v.get_metrics().getPredictions()
 	}
 	
 	/**
@@ -349,7 +350,7 @@ public class RouteSearch {
 		 */
 		for (Vertex n : neighbors) {
 			double at = (double) distance_measure.apply(size, v, n);
-			if (at < n.end()) {
+
 				if (at > distances.get(n)) {
 					continue;
 				} else if (at < distances.get(n)) { // improved distance
@@ -364,7 +365,6 @@ public class RouteSearch {
 						hops.put(n, hops.get(v) + 1);
 					}
 				}
-			}
 		}
 	}
 

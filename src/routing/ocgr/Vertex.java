@@ -62,27 +62,6 @@ public class Vertex {
 		return new Vertex(get_id(), new Contact(contact), m, false);
 	}
 	
-//	void init_caps() {
-//		caps = new HashMap<String, Capacity>();
-//		addCapacity(new BufferSizeCapacity(this));
-//		addCapacity(new TransmissionSpeed(this));
-//	}
-//
-//	void init_preds() {
-//		preds = new HashMap<String, Prediction>();
-//		addPrediction(new BufferFreeCapacityPrediction(this));
-//		addPrediction(new AvgTimeBetweenContactsPrediction(this));
-//		addPrediction(new DurationPrediction(this));
-//	}
-//	
-//	void addPrediction(Prediction p) {
-//		preds.put(p.getName(), p);	
-//	}
-//	
-//	void addCapacity(Capacity c) {
-//		caps.put(c.getName(), c);	
-//	}
-//	
 	public void update_caps() {
 		for (Capacity cap : metrics.getCapMap().values()) {
 			cap.update();
@@ -115,17 +94,6 @@ public class Vertex {
 	public void updatePreds(Vertex pv) {
 		metrics.transitiveUpdate(pv);
 	}
-//	
-//	public void update_preds (DTNHost otherHost) {
-//		OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
-//		extendVerticesAndEdgesToGraph(otherRouter);
-//		Metrics otherMetrics = otherRouter.getMetrics();
-//
-//		for (Prediction p : getPredictionsFor(v).values()) {
-//			p.connUp();
-//		}
-//
-//	}
 	
 	public String get_id() {
 		return vid;
@@ -200,18 +168,42 @@ public class Vertex {
 				get_transmission_speed();
 		return Math.min(buffer_free_capacity(), pred_trans_cap);
 	}
-//	
-//	public double predicted_free_capacity() {
-//		return pred_utilization;
-//	}
-//
-	public double virtual_frequency() {
-		return this.metrics.getPredictions().get("AvgTimeBetweenContactsPred").getValue();
+	public double pred_time_between_contacts() {
+		return this.metrics.getPredictions().get("AvgTimeBetweenContactsPred").getValue(); 
 	}
-//
-//	public Map<String, Prediction> get_preds(){
-//		return preds;
-//	}
+	
+	/**
+	 * ECC - Estimated Contact Capactiy
+	 * "Consume" part of the path.
+	 * We want to avoid more data to be planned to a path than the vertices in this path can handle.
+	 * A vertice can handle a certain amount of data depending on the transmission speed, contact and buffer size.
+	 * Knowing the average transmission speed, contact and buffer size we calculate the amount of data to be processed in average
+	 * between two encounters. With the average frequency of encounters we decide not to overlap a specific amount of data in a time span 
+	 * equal to the average encounter frequency.
+	 * 
+	 * So, everytime a path is searched, we add to the vertices the timestamp and amount of data planned.
+	 * The sum of these amounts should not overlapp the average within the timespan of the average time between two encounters.
+	 *  
+     * On the initailization of the search function, old data is removed, letting the sum equal to the available space in each contact opportunity
+	 * @param time
+	 * @param size
+	 */
+	public void add_data(double time, int size) {
+		if (! is_pivot) {
+			metrics.ecc().add_data(time, size);
+		}
+	}
+	
+	/**
+	 * Before a path is searched using dijkstra, we exclude the size of messages sent long ago.
+	 * Long enough : greater than the average time between contact predictions
+	 * 
+	 */
+	public void update_ecc() {
+		if (! is_pivot) {
+		 metrics.ecc().cleanup();
+		}
+	}
 	
 	@Override
 	public String toString() {
@@ -226,7 +218,7 @@ public class Vertex {
         result = prime * result + ((vid == null) ? 0 : vid.hashCode());
         return result;
     }
-
+    
     /**
      * warning! this equals method does not consider the residual capacity
      * @param obj

@@ -239,9 +239,16 @@ public class OCGRRouterTest extends AbstractCGRRouterTest {
 		
 		h11.createNewMessage(m1);
 		assertEquals(h11.getRouter().getMessageCollection().size(), 1);
-		
-		
 
+		
+		updateAllNodes();
+		// The message should be sent on the next opportunity
+		h11.forceConnection(h12, null, UP); 
+		updateAllNodes();
+		clock.advance(8);
+		h11.forceConnection(h12, null, DOWN); 
+		updateAllNodes();
+		assertEquals(h11.getRouter().getMessageCollection().size(), 0);		
 	}
 	
 	/**
@@ -251,7 +258,42 @@ public class OCGRRouterTest extends AbstractCGRRouterTest {
 	 */
 	
 	public void testPredictionsAverageBetweenContacts() {
+		for (int i = 0; i<3; i++) {
+			h11.forceConnection(h12, null, UP);
+			updateAllNodes();
+			clock.advance(10);
+			h11.forceConnection(h12, null, DOWN);
+			updateAllNodes();
+			clock.advance(10);
+			updateAllNodes();
+		}
+
+		Vertex v11 = ((OCGRRouter)h11.getRouter()).getGraph().get_vertice_map().values().iterator().next();
+		Vertex v12 = ((OCGRRouter)h12.getRouter()).getGraph().get_vertice_map().values().iterator().next();
+		Map<String,Prediction> p11 = v11.get_metrics().getPredictions();
+		Map<String,Prediction> p12 = v12.get_metrics().getPredictions();
+		double predTimeBetweenContacts11 = p11.get("AvgTimeBetweenContactsPred").getValue();
+		double predTimeBetweenContacts12 = p12.get("AvgTimeBetweenContactsPred").getValue();
+		assertEquals(predTimeBetweenContacts11, 20.0); 
+		assertEquals(predTimeBetweenContacts12, 20.0); 	
 
 	}
-	
+
+	public void testUpdateVertexCapacity() {
+		for (int i = 0; i<3; i++) {
+			h11.forceConnection(h12, null, UP);
+			updateAllNodes();
+			clock.advance(10);
+			h11.forceConnection(h12, null, DOWN);
+			updateAllNodes();
+			clock.advance(10);
+			updateAllNodes();
+		}
+		
+		Message m1 = new Message(h11, h12, "crew", 1);
+		h11.createNewMessage(m1);
+		// message was created
+		assertEquals(h11.getRouter().getMessageCollection().size(), 1);
+
+	}
 }

@@ -44,15 +44,18 @@ public class DurationPrediction extends Prediction {
 	@Override
 	public void connUp() {
 		init = SimClock.getTime();
-		getVertex().set_begin(init);
-		getVertex().set_adjusted_begin(init);
-		getVertex().set_end(init + getValue());
+		init = now();
+		end = init + getValue();
+	}
+	
+	public double now() {
+		return SimClock.getTime();
 	}
 
 	@Override
 	public void connDown() {
 		double tmp = end;
-		end = SimClock.getTime();
+		end = now();
 		if (tmp == Double.NaN) {
 			setValue(end-init);
 		} else {

@@ -15,6 +15,7 @@ import routing.ocgr.Vertex;
 public class Metrics {
 	Map<String, Prediction> predMap;
 	Map<String, Capacity>   capMap;
+	EstimatedContactCapacity ecc;
 	Vertex vertice;
 
 	public Metrics(Map<String, Prediction> pM, Map<String, Capacity> cM) {
@@ -47,23 +48,14 @@ public class Metrics {
 	 * 
 	 * @param v The vertice created from the new contact
 	 */
-//	private void addVerticeAndEdgesToGraph(Vertex v) {
-//		graph.get_vertice_map().put(v.get_id(), v);
-//		for (Vertex peer_v : graph.get_vertice_map().values()) {
-//			if (v.get_common_host(peer_v) != null && !v.equals(peer_v)) {			
-//				graph.add_edge(v, peer_v);
-//				graph.add_edge(peer_v, v);
-//			}
-//		}
-//		addMetrics(v);
-//	}
-	
+
 	private void addMetrics(Vertex v) {
 		addCapacity(new BufferSizeCapacity(v));
 		addCapacity(new TransmissionSpeed(v));
 		addPrediction(new BufferFreeCapacityPrediction(v));
 		addPrediction(new AvgTimeBetweenContactsPrediction(v));
 		addPrediction(new DurationPrediction(v));
+		ecc = new EstimatedContactCapacity(predMap.get("avgTimeBetweenContactsPred"), predMap.get("DurationPrediction"), v.get_transmission_speed());
 	}
 	
 	/**
@@ -71,29 +63,7 @@ public class Metrics {
 	 * Find all new connections I don't know about and add to map
 	 * @param v
 	 */
-//	private void extendVerticesAndEdgesToGraph(OCGRRouter r) {
-//		Metrics m = r.getMetrics();
-//		for (Vertex v : m.graph.get_vertice_map().values()) {
-//			if (!graph.get_vertice_map().containsKey(v.get_id())) {
-//				graph.get_vertice_map().put(v.get_id(), v);
-//				addCapacity(v, new BufferSizeCapacity(v));
-//				for (Capacity c : capMap.get(v).values()) {
-//					c.update();
-//				}
-//			}
-//		}
-//		List<Edge> toAdd = new ArrayList<>();
-//		for (List<Edge> elist : m.graph.get_edges().values()) {
-//			for (Edge e : elist) {
-//				if (graph.get_edges().get(e.get_src_id()) == null || !graph.get_edges().get(e.get_src_id()).contains(e)) {
-//					toAdd.add(e);
-//				}
-//			}
-//		}
-//		for (Edge e : toAdd) {
-//			graph.add_edge(e.get_src_vertex(), e.get_dst_vertex());
-//		}
-//	}
+
 	
 	private void addCapacity(Capacity c) {
 		capMap.put(c.getName(), c);	
@@ -116,71 +86,8 @@ public class Metrics {
 	 */
 	public void connUp(Vertex v, DTNHost otherHost) {
 		/** If a new vertex is found, add to graph, create edges and metrics **/
-//		if (!graph.get_vertice_map().containsKey(v.get_id())) {
-//			addVerticeAndEdgesToGraph(v);
-//			for (Capacity cap : capMap.get(v).values()) {
-//				cap.update();
-//			}
-//		}
-//		
-//		/** update metrics **/
-//		OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
-//		extendVerticesAndEdgesToGraph(otherRouter);
-//		Metrics otherMetrics = otherRouter.getMetrics();
-//
-//		if (getPredictionsFor(v) != null) {
-//			for (Prediction p : getPredictionsFor(v).values()) {
-//				p.connUp();
-//			}
-//		}
-//		
-//		transitivePredUpdates(otherMetrics, v);
-//		transitiveCapUpdates(otherMetrics, v);
-
 	}
 	
-//	public void transitivePredUpdates(Metrics m, Vertex v) {
-//		// for every vertice known by the neighbor
-//		for (Vertex ov : m.predMap.keySet()) {
-//			// update capacity prediction
-//			if (ov.equals(v)) { // ignore predictions about this node
-//				continue;
-//			}
-//			Map<String, Prediction> otherPredMap = m.getPredictionsFor(ov);
-//			// TODO: iri assert that nodes do not get otherPredMap null after initialization
-//			if (otherPredMap == null) { //other node predictions is not initialized, ignore
-//				return;
-//			} 
-//			for (Map.Entry<String, Prediction> pred : otherPredMap.entrySet()) {
-//				addPrediction(pred.getValue().getVertex(), pred.getValue());
-//			}		
-//			
-//			/* uses caps and predictions, and therefore not either of them 
-//			 * and must be update separately
-//			 **/
-//			ov.set_pred_utilization();
-//		}
-//	}
-//
-//	// considering that capacity do not change in runtime
-//	public void transitiveCapUpdates(Metrics m, Vertex v) {
-//		for (Vertex ov : m.predMap.keySet()) {
-//			if (ov.equals(v)) { // ignore predictions about this node
-//				continue;
-//			}
-//			Map<String, Capacity> otherCapMap = m.getCapacitiesFor(ov);
-//			if (otherCapMap == null) { //other node predictions is not initialized, ignore
-//				return;
-//			} 
-//			for (Map.Entry<String, Capacity> cap : otherCapMap.entrySet()) {
-//				if (capMap.containsKey(cap.getKey())) {
-//					continue;
-//				}
-//				addCapacity(cap.getValue().getVertex(), cap.getValue());
-//			}
-//		}
-//	}
-
 
 	/**
 	 * Another host was detected to become out of range (end of contact)
@@ -193,10 +100,7 @@ public class Metrics {
 	 */
 	public void connDown(Vertex v, DTNHost otherHost) {
 		/** update metrics **/
-//		OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
-//		for (Entry<String, Prediction> pred : otherRouter.getMetrics().getPredictionsFor(v).entrySet()) {
-//			pred.getValue().connDown();
-//		}		
+		
 	}
 	
 	public int size() {
@@ -220,7 +124,7 @@ public class Metrics {
 		for (Prediction p : predMap.values()) {
 			Prediction remote_pred = pv.get_metrics().getPredictions().get(p.getName());
 			double remote_timestamp = remote_pred.getTimestamp();
-			if (remote_timestamp < p.getTimestamp()) {
+			if (remote_timestamp > p.getTimestamp()) {
 				p.setValue(remote_pred.getValue());
 				p.setTimestamp(remote_timestamp);
 			}
@@ -239,4 +143,10 @@ public class Metrics {
 		metricList.add(vertice.get_id() + " " + thisMetric);
 		return metricList;
 	}
+	
+	public EstimatedContactCapacity ecc() {
+		return ecc;
+	}
+	
+	
 }
