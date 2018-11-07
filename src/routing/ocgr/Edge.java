@@ -1,4 +1,4 @@
-package routing.cgr;
+package routing.ocgr;
 
 public class Edge {
 

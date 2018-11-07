@@ -1,4 +1,4 @@
-package routing.cgr;
+package routing.ocgr;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,19 +17,17 @@ public class Path {
 		}
 		path.clear();
 	}
-	public List<Vertex> construct(Vertex last, Map<Vertex, Vertex> predecessors){
+	public List<Vertex> construct(Vertex last_vertice, Map<Vertex, Vertex> predecessors){
+		Vertex v = last_vertice;
 		this.init();
-		if (!last.is_pivot()) { // on success the last pivot is returned
+		if (last_vertice == null) { 
 			return path;
 		}
-		Vertex v = last;
-		while ((v = predecessors.get(v)) != null) {
+		path.add(last_vertice);
+		while ((v = predecessors.get(v)) != null && !v.is_pivot()) {
 			path.add(v);
 		}
 		Collections.reverse(path);
-		if (path.size() > 0) { // if there is a pivot_begin, remove it.
-			path.remove(0);
-		}
 		return path;
 	}
 	

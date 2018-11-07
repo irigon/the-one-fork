@@ -1,26 +1,28 @@
-package routing.ocgr;
+package routing.ocgr.metrics;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import routing.cgr.Vertex;
+import core.SimClock;
+import routing.ocgr.Vertex;
 
 public abstract class Prediction {
 
-	private Vertex vertice; // change to private
+	protected Vertex vertice; // change to private
 	private double value;
 	private String name;
+	double timestamp;
+
 	
 	public Prediction(Vertex v) {
 		vertice = v;
+		timestamp=-1.0;
 	}
 	
 	protected Vertex getVertex() {
 		return vertice;
 	}
 	
-	public abstract void update();
-
 	public double getValue() {
 		return value;
 	}
@@ -31,7 +33,7 @@ public abstract class Prediction {
 	
 	protected abstract void setName();
 
-	protected void setValue(double val) {
+	public void setValue(double val) {
 		this.value = val;
 	}
 
@@ -39,6 +41,23 @@ public abstract class Prediction {
 		this.name = name;
 	}
 	
+	protected void setEnd(double time) {
+		vertice.set_end(vertice.begin() + time);
+	}
+	
+	public void setTimestamp() {
+		timestamp = SimClock.getTime();
+	}
+	
+	public void setTimestamp(double ts) {
+		timestamp = ts;
+	}
+
+	public double getTimestamp() {
+		return timestamp;
+	}
+		
+	public abstract void update();
 	public abstract void connUp();
 	public abstract void connDown();
 	

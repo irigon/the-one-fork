@@ -50,6 +50,17 @@ public class TestUtils {
 		this.comBus = new ModuleCommunicationBus();
 	}
 
+	public TestUtils(List<ConnectionListener> cl, List<MessageListener> ml,
+			TestSettings settings, MessageRouter mr) {
+		this.conListeners = cl;
+		this.msgListeners = ml;
+		this.allHosts = new ArrayList<DTNHost>();
+		this.settings = settings;
+		this.mr = mr;
+
+		this.comBus = new ModuleCommunicationBus();
+	}
+	
 	public void setMessageRouterProto(MessageRouter mr) {
 		this.mr = mr;
 	}

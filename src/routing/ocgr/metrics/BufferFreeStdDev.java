@@ -1,6 +1,6 @@
-package routing.ocgr;
+package routing.ocgr.metrics;
 
-import routing.cgr.Vertex;
+import routing.ocgr.Vertex;
 
 public class BufferFreeStdDev extends Prediction {
 	

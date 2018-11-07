@@ -21,13 +21,12 @@ import core.Message;
 import core.NetworkInterface;
 import interfaces.SimpleBroadcastInterface;
 import routing.ContactGraphRouter;
-import routing.MessageRouter;
-import routing.cgr.Contact;
-import routing.cgr.Edge;
-import routing.cgr.Graph;
-import routing.cgr.Path;
-import routing.cgr.RouteSearch;
-import routing.cgr.Vertex;
+import routing.ocgr.Contact;
+import routing.ocgr.Edge;
+import routing.ocgr.Graph;
+import routing.ocgr.Path;
+import routing.ocgr.RouteSearch;
+import routing.ocgr.Vertex;
 
 public class CGRRouterTest extends AbstractCGRRouterTest {
 
@@ -832,8 +831,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 		
 		ts.putSetting(ContactGraphRouter.CREATE_CPLAN, ""+false);
-		cgr = new ContactGraphRouter(ts);
-		this.utils.setMessageRouterProto(cgr);
+		ocgr = new ContactGraphRouter(ts);
+		this.utils.setMessageRouterProto(ocgr);
 		core.NetworkInterface.reset();
 		core.DTNHost.reset();
 
@@ -907,8 +906,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 		ts.putSetting(ContactGraphRouter.CREATE_CPLAN, ""+false);
 		ts.putSetting(BSIZE_S, ""+BUFFER_SIZE);
-		cgr = new ContactGraphRouter(ts);
-		this.utils.setMessageRouterProto(cgr);
+		ocgr = new ContactGraphRouter(ts);
+		this.utils.setMessageRouterProto(ocgr);
 		core.NetworkInterface.reset();
 		core.DTNHost.reset();
 

@@ -3,7 +3,8 @@ package routing.ocgr;
 import java.util.List;
 
 import core.DTNHost;
-import routing.cgr.Vertex;
+import routing.ocgr.Vertex;
+import routing.ocgr.metrics.Capacity;
 
 public class TransmissionSpeed extends Capacity {
 

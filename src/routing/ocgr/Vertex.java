@@ -1,19 +1,13 @@
-package routing.cgr;
+package routing.ocgr;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import core.DTNHost;
+import routing.MessageRouter;
 import routing.OCGRRouter;
-import routing.ocgr.AvgTimeBetweenContactsPrediction;
-import routing.ocgr.BufferFreeCapacityPrediction;
-import routing.ocgr.BufferSizeCapacity;
-import routing.ocgr.Capacity;
-import routing.ocgr.DurationPrediction;
-import routing.ocgr.Metrics;
-import routing.ocgr.Prediction;
-import routing.ocgr.TransmissionSpeed;
+import routing.ocgr.metrics.Capacity;
+import routing.ocgr.metrics.Metrics;
+import routing.ocgr.metrics.Prediction;
 
 public class Vertex {
 	
@@ -22,25 +16,28 @@ public class Vertex {
 	private boolean is_pivot;
 	/** TODO start variables for OCGR **/
 	// predicted capacity given the resource that were already allocated for this vertex
-	Map<String, Prediction> preds;
-	Map<String, Capacity> caps;
-	private double pred_utilization;
+	private Metrics metrics;
 	/** Ends variables for ocgr **/
 
 	public Vertex(String id, Contact c, boolean pivot) {
 		vid = id;
 		contact = c;
 		is_pivot = pivot;
-		init_caps();
-		init_preds();
+	}
+
+	public Vertex(String id, Contact c, Metrics m, boolean pivot) {
+		vid = id;
+		contact = c;
+		metrics = m;
+		is_pivot = pivot;
+		m.init_vertice(this);
 	}
 	
 	public Vertex(Vertex v) {
 		vid = v.vid;
 		contact = v.contact;
 		is_pivot = v.is_pivot;
-		init_caps();
-		init_preds();
+		metrics = v.metrics;
 	}
 	
 	public Vertex(Vertex v, double start, double end) {
@@ -48,47 +45,55 @@ public class Vertex {
 		contact = new Contact(hl.get(0), hl.get(1), start, end);
 		vid = "vertex_" +  contact.get_id();
 		is_pivot = v.is_pivot();
-		init_caps();
-		init_preds();
 	}
 	
-	void init_caps() {
-		caps = new HashMap<String, Capacity>();
-		addCapacity(new BufferSizeCapacity(this));
-		addCapacity(new TransmissionSpeed(this));
-	}
-
-	void init_preds() {
-		preds = new HashMap<String, Prediction>();
-		addPrediction(new BufferFreeCapacityPrediction(this));
-		addPrediction(new AvgTimeBetweenContactsPrediction(this));
-		addPrediction(new DurationPrediction(this));
+	public Metrics get_metrics() {
+		return metrics;
 	}
 	
-	void addPrediction(Prediction p) {
-		preds.put(p.getName(), p);	
-	}
-	
-	void addCapacity(Capacity c) {
-		caps.put(c.getName(), c);	
+	/**
+	 * This is not a deep_copy clone
+	 * Hosts are still passed by address
+	 * 
+	 * @return a vertice with the same fields
+	 */
+	public Vertex hybrid_clone () {
+		Metrics m = Metrics.create_metrics();
+		return new Vertex(get_id(), new Contact(contact), m, false);
 	}
 	
 	public void update_caps() {
-		for (Capacity cap : caps.values()) {
+		for (Capacity cap : metrics.getCapMap().values()) {
 			cap.update();
 		}
 	}
 	
-//	public void update_preds (DTNHost otherHost) {
-//		OCGRRouter otherRouter = (OCGRRouter)otherHost.getRouter();
-//		extendVerticesAndEdgesToGraph(otherRouter);
-//		Metrics otherMetrics = otherRouter.getMetrics();
-//
-//		for (Prediction p : getPredictionsFor(v).values()) {
-//			p.connUp();
-//		}
-//
-//	}
+	/**
+	 * [1] Update predictions for the current contact
+	 */
+	public void connUp() {
+		/* [1]  Update predictions for the current contact */
+		for (Prediction p : metrics.getPredictions().values()) {
+			p.connUp();
+		}
+	}
+
+	public void connDown() {
+		/* [1]  Update predictions for the current contact */
+		for (Prediction p : metrics.getPredictions().values()) {
+			p.connDown();
+		}
+	}
+
+	
+	/**
+	 * Compares the timestamp 
+	 * if ov has a newer version, copy predictions
+	 * @param pv peer Vertice
+	 */
+	public void updatePreds(Vertex pv) {
+		metrics.transitiveUpdate(pv);
+	}
 	
 	public String get_id() {
 		return vid;
@@ -158,21 +163,46 @@ public class Vertex {
 		this.contact.set_end(new_end);
 	}
 	
-	public void set_pred_utilization() {
-		double pred_trans_cap = preds.get("DurationPrediction").getValue()*get_transmission_speed();
-		pred_utilization =  Math.min(buffer_free_capacity(), pred_trans_cap);
+	public double predicted_free_capacity() {
+		double pred_trans_cap = metrics.getPredictions().get("DurationPrediction").getValue() *
+				get_transmission_speed();
+		return Math.min(buffer_free_capacity(), pred_trans_cap);
+	}
+	public double pred_time_between_contacts() {
+		return this.metrics.getPredictions().get("AvgTimeBetweenContactsPred").getValue(); 
 	}
 	
-	public double predicted_free_capacity() {
-		return pred_utilization;
+	/**
+	 * ECC - Estimated Contact Capactiy
+	 * "Consume" part of the path.
+	 * We want to avoid more data to be planned to a path than the vertices in this path can handle.
+	 * A vertice can handle a certain amount of data depending on the transmission speed, contact and buffer size.
+	 * Knowing the average transmission speed, contact and buffer size we calculate the amount of data to be processed in average
+	 * between two encounters. With the average frequency of encounters we decide not to overlap a specific amount of data in a time span 
+	 * equal to the average encounter frequency.
+	 * 
+	 * So, everytime a path is searched, we add to the vertices the timestamp and amount of data planned.
+	 * The sum of these amounts should not overlapp the average within the timespan of the average time between two encounters.
+	 *  
+     * On the initailization of the search function, old data is removed, letting the sum equal to the available space in each contact opportunity
+	 * @param time
+	 * @param size
+	 */
+	public void add_data(double time, int size) {
+		if (! is_pivot) {
+			metrics.ecc().add_data(time, size);
+		}
 	}
-
-	public double virtual_frequency() {
-		return this.preds.get("AvgTimeBetweenContactsPred").getValue();
-	}
-
-	public Map<String, Prediction> get_preds(){
-		return preds;
+	
+	/**
+	 * Before a path is searched using dijkstra, we exclude the size of messages sent long ago.
+	 * Long enough : greater than the average time between contact predictions
+	 * 
+	 */
+	public void update_ecc() {
+		if (! is_pivot) {
+		 metrics.ecc().cleanup();
+		}
 	}
 	
 	@Override
@@ -188,7 +218,7 @@ public class Vertex {
         result = prime * result + ((vid == null) ? 0 : vid.hashCode());
         return result;
     }
-
+    
     /**
      * warning! this equals method does not consider the residual capacity
      * @param obj
