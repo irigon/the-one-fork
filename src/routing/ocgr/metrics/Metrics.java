@@ -55,7 +55,7 @@ public class Metrics {
 		addPrediction(new BufferFreeCapacityPrediction(v));
 		addPrediction(new AvgTimeBetweenContactsPrediction(v));
 		addPrediction(new DurationPrediction(v));
-		ecc = new EstimatedContactCapacity(predMap.get("avgTimeBetweenContactsPred"), predMap.get("DurationPrediction"), v.get_transmission_speed());
+		ecc = new EstimatedContactCapacity(predMap.get("AvgTimeBetweenContactsPred"), predMap.get("DurationPrediction"), v.get_transmission_speed());
 	}
 	
 	/**

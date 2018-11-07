@@ -41,7 +41,9 @@ public class EstimatedContactCapacity {
 	}
 	
 	public void cleanup() {
-		if (avgTimeBetweenContactsPred == null) { return; }
+		if (avgTimeBetweenContactsPred == null) { 
+			return; 
+		}
 		double time_between_contact = avgTimeBetweenContactsPred.getValue();
 		double oldest_acceptable_tt = now() - avgTimeBetweenContactsPred.getValue();
 		assert oldest_acceptable_tt > 0;

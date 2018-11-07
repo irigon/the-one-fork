@@ -114,6 +114,7 @@ public class RouteSearch {
 	}
 
 	Distance<Integer, Vertex, Vertex, Double> least_latency = (size, cur, neighbor) -> {
+		if (neighbor.get_metrics().ecc().free() < size) return Double.POSITIVE_INFINITY;
 		double neighbor_transmission_time = (double) size / neighbor.get_transmission_speed();
 		return neighbor.is_pivot() ? 0.0 : neighbor.pred_time_between_contacts() + neighbor_transmission_time;
 	};
@@ -349,7 +350,7 @@ public class RouteSearch {
 		 * We have to change here to take in account that we don't have absolute time anymore
 		 */
 		for (Vertex n : neighbors) {
-			double at = (double) distance_measure.apply(size, v, n);
+			double at = n.is_pivot() ? distances.get(v) : (double) distance_measure.apply(size, v, n);
 
 				if (at > distances.get(n)) {
 					continue;
