@@ -124,8 +124,8 @@ public class OCGRRouter extends ActiveRouter {
 			v.connDown();
 			/** Delete transfered messages **/
 			List<Message> toDelete = new ArrayList<>();
+			DTNHost other = con.getOtherNode(getHost());
 			for (Message m : getMessageCollection()) {
-				DTNHost other = con.getOtherNode(getHost());
 				if ((int)m.getProperty(NEXT_CONTACT) == other.getAddress()) {
 					if (other.getMessageCollection().contains(m)) {
 						// message was successfully transfered, delete it
@@ -135,7 +135,16 @@ public class OCGRRouter extends ActiveRouter {
 			}
 			for (Message m : toDelete) { 
 				deleteMessage(m.getId(), true);
-			}				
+			}	
+			/* recalculate the best path to messages that were not transfered 
+			 * reduce this from the metrics to be sent */
+			for (Message m : getMessageCollection()) {
+				int next_contact = (int)m.getProperty(NEXT_CONTACT);
+				if (next_contact == other.getAddress() || next_contact == -1) {
+					//System.out.println(m + " will be recalculated");
+					isMessageDeliverable(m);
+				}
+			}
 		}
 	}
 
@@ -307,7 +316,8 @@ public class OCGRRouter extends ActiveRouter {
 		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
 		Path path = route_search.get_path(last_hop);
 		List<Vertex> path_list = path.get_path_as_list();
-		if (path_list.size() > 0) {
+		// if size > 0 && destination host is in the next hop
+		if (path_list.size() > 0 && last_hop.get_hosts().contains(m.getTo())) {
 			DTNHost next_hop = path_list.get(0).get_other_host(getHost());
 			double start_time = Math.max(now, path_list.get(0).adjusted_begin());
 			set_message_next_hop(m, next_hop.getAddress(), start_time);
@@ -329,8 +339,19 @@ public class OCGRRouter extends ActiveRouter {
     	Message m = super.messageTransferred(id, from);
     	if (m != null) {
     		from.getRouter().removeFromMessages(m.getId());
-    		if (!isMessageDeliverable(m)) {
+    		/*
+    		 * A mensagem nao foi adicionada ao buffer de mensagens. Isso foi verificado no MessageRouter:messageTransferred()
+    		 * if (m.getTo().equals(getHost())) {
+    			System.out.println("Feliz " + m + " chegou");
     			removeFromMessages(m.getId());
+
+    		} else  
+    			if (!isMessageDeliverable(m)) {
+    			System.out.println("Pobre " + m + " foi deletada");
+    			removeFromMessages(m.getId());
+    		} */
+    		if (!isMessageDeliverable(m)) {
+    			m.updateProperty(NEXT_CONTACT, -1);
     		}
     	}
         return m;

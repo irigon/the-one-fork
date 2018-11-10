@@ -59,6 +59,7 @@ public class MapRouteMovement extends MapBasedMovement implements
 		String fileName = settings.getSetting(ROUTE_FILE_S);
 		int type = settings.getInt(ROUTE_TYPE_S);
 		allRoutes = MapRoute.readRoutes(fileName, type, getMap());
+		System.out.print(allRoutes.get(0).getStops() + "\n");
 		nextRouteIndex = 0;
 		pathFinder = new DijkstraPathFinder(getOkMapNodeTypes());
 		this.route = this.allRoutes.get(this.nextRouteIndex).replicate();

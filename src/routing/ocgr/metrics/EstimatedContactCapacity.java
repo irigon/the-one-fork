@@ -41,7 +41,7 @@ public class EstimatedContactCapacity {
 	}
 	
 	public void cleanup() {
-		if (avgTimeBetweenContactsPred == null) { 
+		if (avgTimeBetweenContactsPred == null || avgTimeBetweenContactsPred.getValue() == Double.POSITIVE_INFINITY) { 
 			return; 
 		}
 		double time_between_contact = avgTimeBetweenContactsPred.getValue();

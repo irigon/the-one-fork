@@ -42,6 +42,7 @@ public class RouteSearch {
 		init_settled();
 		init_hops();
 		distance_measure = least_latency;
+		//distance_measure = num_hops;
 		expire_time = Double.POSITIVE_INFINITY;
 		init_averages();
 		// TODO: init_variables_for_ocgr
@@ -196,6 +197,9 @@ public class RouteSearch {
 			} else {
 				e_pivot = new Edge(v, pivot);
 				addEdge(v.get_id(), e_pivot);
+				// I am adding this object here to be cleaned up at the end of the procedure.
+				// TODO: verify that it is not wrong
+				pivot_obj_list.add(e_pivot);
 			}
 		}
 		return pivot_obj_list;
