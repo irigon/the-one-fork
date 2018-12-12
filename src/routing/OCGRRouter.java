@@ -75,6 +75,24 @@ public class OCGRRouter extends ActiveRouter {
 		Map<String, List<Edge>> edges = new HashMap<String, List<Edge>>();
 		return new Graph(vertices, edges);
 	}
+
+	/**
+	 * Get the correspondent vertex to this connection. Create one if inexistent.
+	 * @param thisHost The host in which the changeConnection call happened.
+	 * @param otherHost The communication peer
+	 * @return the vertex in the graph corresponding to this contact opportunity
+	 */
+	private Vertex getVertexFromPair(DTNHost thisHost, DTNHost otherHost) {
+		Contact c = new Contact (thisHost, otherHost, 0.0, 0.0);
+		String vid = "vertex_" + c.get_id();
+		Vertex v_tmp = new Vertex(vid, c, Metrics.create_metrics(), false);
+		if (!cg.has_vertice(v_tmp.get_id())) {
+			add_vertice(v_tmp);
+		}
+		Vertex vertex = cg.get_vertice_map().get(v_tmp.get_id());
+		assert (vertex != null);
+		return vertex;
+	}
 	
 	@Override
 	public void changedConnection(Connection con) {
@@ -82,16 +100,7 @@ public class OCGRRouter extends ActiveRouter {
 		assert otherHost.getRouter() instanceof OCGRRouter :
 			"OCGRRouter only works with other routers of same type";
 
-		Contact c = new Contact (getHost(), otherHost, 0.0, 0.0);
-		String vid = "vertex_" + c.get_id();
-		Vertex v_tmp = new Vertex(vid, c, Metrics.create_metrics(), false);
-		if (!cg.has_vertice(v_tmp.get_id())) {
-			add_vertice(v_tmp);
-		}
-		
-		Vertex v = cg.get_vertice_map().get(v_tmp.get_id());
-
-		assert(v != null);
+		Vertex v = getVertexFromPair(getHost(), otherHost);
 		
 		/**
 		 * When a connection is up:
@@ -114,7 +123,7 @@ public class OCGRRouter extends ActiveRouter {
 					/* I am supposing the capacity can be calculated from the cloned vertice */
 					add_vertice(new_v);
 				}
-				// update transitively other vertices predictions if needed
+				// update other vertices predictions transitively
 				if (!v.get_id().equals(ov.get_id()) && !ov.is_pivot()) {
 					Vertex local_vertex = cg.get_vertice_map().get(ov.get_id());
 					local_vertex.updatePreds(ov);
@@ -142,6 +151,9 @@ public class OCGRRouter extends ActiveRouter {
 				int next_contact = (int)m.getProperty(NEXT_CONTACT);
 				if (next_contact == other.getAddress() || next_contact == -1) {
 					//System.out.println(m + " will be recalculated");
+					if (next_contact == other.getAddress()) {
+						m.addNodeOnPath(otherHost);
+					}
 					isMessageDeliverable(m);
 				}
 			}
@@ -258,6 +270,10 @@ public class OCGRRouter extends ActiveRouter {
 				return null;
 			}
 			for (Connection c : connections) {
+				// avoid to send messages greater than peer free buffer size
+				if (m.getSize() > c.getOtherNode(getHost()).getRouter().getFreeBufferSize()) {
+					continue;
+				}
 				if (tryMessageToConnection(c, m, next_hop_addr) != null) {
 					return c;
 				}
