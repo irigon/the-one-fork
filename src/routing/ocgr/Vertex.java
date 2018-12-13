@@ -123,8 +123,16 @@ public class Vertex {
 		return new Vertex(this);
 	}
 	
-	public double current_capacity() {
-		return contact.get_current_capacity();
+	public double current_transmission_capacity() {
+		return contact.get_current_transmission_capacity();
+	}
+
+	public double pred_storage_capacity() {
+		return metrics.getPredictions().get("BufferFreeCapacityPrediction").getValue();
+	}
+
+	public double pred_transmission_capacity_left() {
+		return metrics.ecc().free();
 	}
 	
 	/* Buffer free capacity is the minimal residual capacity among the buffers in this contact */

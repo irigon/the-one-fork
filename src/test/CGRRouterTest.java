@@ -182,8 +182,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	}
 
 	public void test_current_capacity() {
-		assertEquals(c4.get_current_capacity(), (c4.end() - c4.adjusted_begin()) * c4.get_transmission_speed());
-		assertEquals(c4.get_current_capacity(), 100.0);
+		assertEquals(c4.get_current_transmission_capacity(), (c4.end() - c4.adjusted_begin()) * c4.get_transmission_speed());
+		assertEquals(c4.get_current_transmission_capacity(), 100.0);
 	}
 
 	public void test_get_other_host() {

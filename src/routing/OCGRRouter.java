@@ -263,6 +263,15 @@ public class OCGRRouter extends ActiveRouter {
 		for (int i = 0, n = messages.size(); i < n; i++) {
 			Message m = messages.get(i);
 			int next_hop_addr = (int) m.getProperty(NEXT_CONTACT);
+			
+/*			if (next_hop_addr == -1) {
+				// maybe the message just became deliver
+				if (!isMessageDeliverable(m)) continue;
+				next_hop_addr = (int) m.getProperty(NEXT_CONTACT);
+				if (next_hop_addr == -1) continue;
+			}
+*/
+			
 			double starting_time = (double) m.getProperty(STARTING_TIME);
 			// the message is scheduled for later on. Sending now could cause a buffered message
 			// to be deleted before sent
@@ -327,7 +336,6 @@ public class OCGRRouter extends ActiveRouter {
 		// just create a new RouteSearch if some vertex changed
 		route_search = new RouteSearch(cg);
 		route_search.set_distance_algorithm("least_latency");			
-//		route_search.set_distance_algorithm("min_hops");			
 
 		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
 		Path path = route_search.get_path(last_hop);
@@ -355,17 +363,6 @@ public class OCGRRouter extends ActiveRouter {
     	Message m = super.messageTransferred(id, from);
     	if (m != null) {
     		from.getRouter().removeFromMessages(m.getId());
-    		/*
-    		 * A mensagem nao foi adicionada ao buffer de mensagens. Isso foi verificado no MessageRouter:messageTransferred()
-    		 * if (m.getTo().equals(getHost())) {
-    			System.out.println("Feliz " + m + " chegou");
-    			removeFromMessages(m.getId());
-
-    		} else  
-    			if (!isMessageDeliverable(m)) {
-    			System.out.println("Pobre " + m + " foi deletada");
-    			removeFromMessages(m.getId());
-    		} */
     		if (!isMessageDeliverable(m)) {
     			m.updateProperty(NEXT_CONTACT, -1);
     		}

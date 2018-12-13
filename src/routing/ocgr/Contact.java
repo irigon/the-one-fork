@@ -103,7 +103,7 @@ public class Contact {
 		transmission_speed = ts;
 	}
 	
-	public double get_current_capacity() {
+	public double get_current_transmission_capacity() {
 		return (end - adjusted_begin) * transmission_speed;
 	}
 	

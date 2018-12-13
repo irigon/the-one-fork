@@ -335,18 +335,15 @@ public class RouteSearch {
 			v_dst = vertices.get(e.get_dest_id());
 			if (settled.contains(v_dst)) continue;
 			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
-			if (!(v_dst.current_capacity() > size)) continue;
-			// verify that the destination host has space for the new message
-			h_dst = v_dst.get_other_host(v.get_common_host(v_dst));
-			
-			// capacity taken in account the messages already planned 
-			//h_dst_capacity = (v_dst.adjusted_begin() - v_dst.begin())* v_dst.get_transmission_speed();
-			
-			h_dst_capacity = (v_dst.end() - v_dst.adjusted_begin())* v_dst.get_transmission_speed();
-			
-			// virtually reserved space (taking into account the messages that are planned to be sent)
-			//if (h_dst.getRouter().getFreeBufferSize() - h_dst_capacity < m.getSize()) continue;
-			if (h_dst_capacity < m.getSize()) continue;
+			if (!v_dst.is_pivot()) {
+				// verify that the node is capable of transmitting the message
+				if (!(v_dst.pred_transmission_capacity_left() > size))
+					continue;
+
+				// verify that the node is able to store the message
+				if (!(v_dst.pred_storage_capacity() > size))
+					continue;
+			}
 			neighbors.add(v_dst);
 		}
 		
@@ -403,6 +400,7 @@ public class RouteSearch {
 			unsettled.remove(next);
 			settled.add(next);
 		}
+		// this return is not being used. TODO: clean up
 		return next;
 	}
 
@@ -429,10 +427,10 @@ public class RouteSearch {
 			}
 			List<DTNHost> hl = c.get_hosts();
 			// contacts including current host (used for pivot_begin) with enough capacity
-			if (hl.contains(h)  && c.current_capacity() > m.getSize()) {
+			if (hl.contains(h)  && c.current_transmission_capacity() > m.getSize()) {
 				candidates.get("coi_src").add(c);
 			}
-			if (hl.contains(m.getTo()) && c.current_capacity() > m.getSize()) {
+			if (hl.contains(m.getTo()) && c.current_transmission_capacity() > m.getSize()) {
 				candidates.get("coi_dst").add(c);
 			}
 		}
@@ -473,10 +471,8 @@ public class RouteSearch {
 		Vertex pivot_end = (Vertex)p_end.get(0);
 		Vertex last_node;
 		
-		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
-
-		// set last_node to null if pivot_end == null, otherwise to its predecessor
-		last_node = pivot_end == null ? pivot_end : predecessors.get(pivot_end); 
+		run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
+		last_node = predecessors.get(pivot_end); 
 		
 		// cleanup edges from and to pivots and the pivots themselves
 		clean_pivot(p_begin);
