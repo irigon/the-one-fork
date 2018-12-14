@@ -340,7 +340,13 @@ public class RouteSearch {
 				if (!(v_dst.pred_transmission_capacity_left() > size))
 					continue;
 
-				// verify that the node is able to store the message
+				// verify that the next hop is able to store the message
+				// therere we need to know, in the vertex, who is the next node
+				DTNHost other = v_dst.get_other_host(v.get_common_host(v_dst));
+				
+				/*TODO:
+				 * What should be done here is to have 2 predictions one to storage A->B, and another B->A
+				 * */
 				if (!(v_dst.pred_storage_capacity() > size))
 					continue;
 			}

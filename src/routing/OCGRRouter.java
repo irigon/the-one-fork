@@ -154,7 +154,7 @@ public class OCGRRouter extends ActiveRouter {
 					if (next_contact == other.getAddress()) {
 						m.addNodeOnPath(otherHost);
 					}
-					isMessageDeliverable(m);
+					route(getHost(), SimClock.getTime(), m, msgTtl);
 				}
 			}
 		}
@@ -264,14 +264,6 @@ public class OCGRRouter extends ActiveRouter {
 			Message m = messages.get(i);
 			int next_hop_addr = (int) m.getProperty(NEXT_CONTACT);
 			
-/*			if (next_hop_addr == -1) {
-				// maybe the message just became deliver
-				if (!isMessageDeliverable(m)) continue;
-				next_hop_addr = (int) m.getProperty(NEXT_CONTACT);
-				if (next_hop_addr == -1) continue;
-			}
-*/
-			
 			double starting_time = (double) m.getProperty(STARTING_TIME);
 			// the message is scheduled for later on. Sending now could cause a buffered message
 			// to be deleted before sent
@@ -292,6 +284,12 @@ public class OCGRRouter extends ActiveRouter {
 	}
 
 	
+	/*TODO:
+	 * 	--> even if the message is not deliverable at a first moment, it should be created
+	 * 		it might be that the channel is currently congested and will be enable soon
+	 * 		what if a message to an inexisting node is created?
+	 *  --> add test cases
+	 * */
 	@Override
 	public boolean createNewMessage(Message m) {
 		if (getFreeBufferSize() > m.getSize() && isMessageDeliverable(m)) {
@@ -333,27 +331,35 @@ public class OCGRRouter extends ActiveRouter {
 	boolean isMessageDeliverable(Message m) {
 		boolean result = false;
 		double now = SimClock.getTime();
-		// just create a new RouteSearch if some vertex changed
+		return route(getHost(), now, m, msgTtl) != null;
+	}
+	
+	Vertex route(DTNHost h, double t, Message m, int ttl) {
+		Vertex next_vertice = null;
 		route_search = new RouteSearch(cg);
 		route_search.set_distance_algorithm("least_latency");			
-
-		Vertex last_hop = route_search.search(getHost(), now, m, msgTtl);
+		
+		Vertex last_hop = route_search.search(h, t, m, ttl);
 		Path path = route_search.get_path(last_hop);
 		List<Vertex> path_list = path.get_path_as_list();
+		
 		// if size > 0 && destination host is in the next hop
 		if (path_list.size() > 0 && last_hop.get_hosts().contains(m.getTo())) {
-			DTNHost next_hop = path_list.get(0).get_other_host(getHost());
-			double start_time = Math.max(now, path_list.get(0).adjusted_begin());
+			next_vertice = path_list.get(0);
+			DTNHost next_hop = next_vertice.get_other_host(getHost());
+			double start_time = Math.max(t, path_list.get(0).adjusted_begin());
 			set_message_next_hop(m, next_hop.getAddress(), start_time);
 			cg.consume_path(path, m, 0.01);
-			result = true;
+		} 
+		else {
+			//m.updateProperty(NEXT_CONTACT, -1);
 		}
-		return result;
+		return next_vertice;
 	}
 	
 	/**
 	 * A node just completed a message transmission. 
-	 * Recalculate path, exclude message if it is not reachable, set next hop otherwise.
+	 * Recalculate path and set next hop.
 	 * @param from	Host from who the router got this message
 	 * @param m	Message to be sent
 	 * @return return Message
