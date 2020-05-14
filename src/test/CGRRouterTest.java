@@ -21,13 +21,12 @@ import core.Message;
 import core.NetworkInterface;
 import interfaces.SimpleBroadcastInterface;
 import routing.ContactGraphRouter;
-import routing.MessageRouter;
-import routing.cgr.Contact;
-import routing.cgr.Edge;
-import routing.cgr.Graph;
-import routing.cgr.Path;
-import routing.cgr.RouteSearch;
-import routing.cgr.Vertex;
+import routing.ocgr.Contact;
+import routing.ocgr.Edge;
+import routing.ocgr.Graph;
+import routing.ocgr.Path;
+import routing.ocgr.RouteSearch;
+import routing.ocgr.Vertex;
 
 public class CGRRouterTest extends AbstractCGRRouterTest {
 
@@ -40,7 +39,6 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 		ts.setNameSpace(null);
 		ts.putSetting(ContactGraphRouter.CGR_NS + "." + ContactGraphRouter.CGR_DISTANCE_ALGO , 
 				ContactGraphRouter.CGR_DEFAULT_DISTANCE_ALGO+"");
-//		setRouterProto(new ContactGraphRouter(ts));
 		super.setUp();
 		
 	}
@@ -184,8 +182,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 	}
 
 	public void test_current_capacity() {
-		assertEquals(c4.get_current_capacity(), (c4.end() - c4.adjusted_begin()) * c4.get_transmission_speed());
-		assertEquals(c4.get_current_capacity(), 100.0);
+		assertEquals(c4.get_current_transmission_capacity(), (c4.end() - c4.adjusted_begin()) * c4.get_transmission_speed());
+		assertEquals(c4.get_current_transmission_capacity(), 100.0);
 	}
 
 	public void test_get_other_host() {
@@ -833,8 +831,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 		
 		ts.putSetting(ContactGraphRouter.CREATE_CPLAN, ""+false);
-		cgr = new ContactGraphRouter(ts);
-		this.utils.setMessageRouterProto(cgr);
+		ocgr = new ContactGraphRouter(ts);
+		this.utils.setMessageRouterProto(ocgr);
 		core.NetworkInterface.reset();
 		core.DTNHost.reset();
 
@@ -908,8 +906,8 @@ public class CGRRouterTest extends AbstractCGRRouterTest {
 
 		ts.putSetting(ContactGraphRouter.CREATE_CPLAN, ""+false);
 		ts.putSetting(BSIZE_S, ""+BUFFER_SIZE);
-		cgr = new ContactGraphRouter(ts);
-		this.utils.setMessageRouterProto(cgr);
+		ocgr = new ContactGraphRouter(ts);
+		this.utils.setMessageRouterProto(ocgr);
 		core.NetworkInterface.reset();
 		core.DTNHost.reset();
 

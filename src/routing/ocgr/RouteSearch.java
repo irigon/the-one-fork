@@ -1,4 +1,4 @@
-package routing.cgr;
+package routing.ocgr;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,7 +14,6 @@ import java.util.TreeSet;
 
 import core.DTNHost;
 import core.Message;
-import util.Tuple;
 
 public class RouteSearch {
 
@@ -27,6 +26,12 @@ public class RouteSearch {
 	private SortedSet<Vertex> unsettled;
 	private Distance<Integer, Vertex, Vertex, Double> distance_measure;
 	private double expire_time;
+	/** Start Variables for ocgr **/
+	private double avg_capacity;
+	private double avg_frequency;
+	private final double CAP_WEIGHT  = 0.5;
+	private final double FREQ_WEIGHT = 0.5;
+	/** End Variables for ocgr **/
 
 	public RouteSearch(Graph g) {
 		vertices = g.get_vertice_map();
@@ -37,7 +42,37 @@ public class RouteSearch {
 		init_settled();
 		init_hops();
 		distance_measure = least_latency;
+		//distance_measure = num_hops;
 		expire_time = Double.POSITIVE_INFINITY;
+		init_averages();
+		// TODO: init_variables_for_ocgr
+	}
+	
+	private void init_averages() {
+		int cap_counter = 0;
+		int freq_counter = 0;
+		double cap_sum = 0.0;
+		double freq_sum = 0.0;
+		for (Vertex v : vertices.values()) {
+			if (v.is_pivot()) {
+				continue;
+			}
+			if (v.predicted_free_capacity() > 0) {
+				cap_counter++;
+				cap_sum += v.predicted_free_capacity();
+			}
+			if (v.pred_time_between_contacts() > 0) {
+				freq_counter++;
+				freq_sum += v.pred_time_between_contacts();
+			}
+		}
+		avg_capacity = cap_sum / cap_counter;
+		avg_frequency = freq_sum / freq_counter;
+	}
+	
+	/* Set predictions on vertices */
+	private void init_predictions() {
+		
 	}
 	
 	private void init_distances() {
@@ -80,12 +115,34 @@ public class RouteSearch {
 	}
 
 	Distance<Integer, Vertex, Vertex, Double> least_latency = (size, cur, neighbor) -> {
+		if (neighbor.get_metrics().ecc().free() < size) return Double.POSITIVE_INFINITY;
 		double neighbor_transmission_time = (double) size / neighbor.get_transmission_speed();
-		return Math.max(distances.get(cur), neighbor.adjusted_begin()) + neighbor_transmission_time;
+		return neighbor.is_pivot() ? 0.0 : neighbor.pred_time_between_contacts() + neighbor_transmission_time;
 	};
 
 	Distance<Integer, Vertex, Vertex, Double> num_hops = (size, cur, neighbor) -> {
-		return distances.get(cur) + 1.0;
+		return neighbor.is_pivot() ? 0.0 : distances.get(cur) + 1.0;
+	};
+	
+	/**
+	 * TODO: Here we are basically giving importance to the capacity.
+	 * But other values should be taken in account as #hops, min latency, max frequency, etc.
+	 * This example serves to show the feasibility of the approach to the specific example in hand
+	 * 
+	 * the predicted capacity should be set on the dijkstra init function
+	 */
+	Distance<Integer, Vertex, Vertex, Double> greatest_capacity = (size, cur, neighbor) -> {
+		if (neighbor.is_pivot()) {
+			return 0.0;
+		}
+		if (neighbor.predicted_free_capacity() < size) {
+			return Double.POSITIVE_INFINITY;
+		}
+		if (neighbor.predicted_free_capacity() < 0 || neighbor.pred_time_between_contacts() < 0) {
+			return Double.POSITIVE_INFINITY; // statistics not set yet		
+		}
+		return (avg_capacity / neighbor.predicted_free_capacity()) * CAP_WEIGHT 
+				+ (avg_frequency / neighbor.pred_time_between_contacts()) * FREQ_WEIGHT;
 	};
 
 	/**
@@ -99,11 +156,15 @@ public class RouteSearch {
 			distance_measure = num_hops;
 		} else if (name == "least_latency") {
 			this.distance_measure = least_latency;
+		} else if (name == "fair_distribution") {
+			this.distance_measure = greatest_capacity;
 		}
 	}
 	
 	/**
-	 * Create the a pivot and add it to vertices.
+	 * Create a pivot and add it to vertices.
+	 * 
+	 * 
 	 * 
 	 * @param v_to_connect
 	 *            Vertices to which this pivot should connect to
@@ -116,7 +177,7 @@ public class RouteSearch {
 	 * @param start
 	 *            true if this is the pivot_begin false if it is end (needed for the
 	 *            direction of the edge)
-	 * @return The pivot vertice
+	 * @return The pivot vertice, with the pivot in the first place and a list of edges if the destination is a pivot
 	 */
 	private List<Object> create_pivot_and_initialize(SortedSet<Vertex> v_to_connect, DTNHost h, boolean start) {
 		List<Object> pivot_obj_list = new LinkedList<>();
@@ -124,24 +185,32 @@ public class RouteSearch {
 		Contact c = new Contact(h, h, 0.0, Double.POSITIVE_INFINITY);
 		Vertex pivot = new Vertex(c.get_id(), c, true);
 		String name = c.get_id();
-		vertices.put(name, pivot);
-//		pivot.set_receiver(h);
-		edges.put(pivot.get_id(), new LinkedList<>());
+		vertices.put(name, pivot); 
 		pivot_obj_list.add(pivot);
-
+		Edge e_pivot;
+		
 		for (Vertex v : v_to_connect) {
 			if (start) {
-				edges.get(pivot.get_id()).add(new Edge(pivot, v));
+				e_pivot = new Edge(pivot, v);
+				addEdge(pivot.get_id(), e_pivot);
+				pivot_obj_list.add(e_pivot);
 			} else {
-				Edge to_pivot = new Edge(v, pivot);
-				edges.get(v.get_id()).add(to_pivot);
-				pivot_obj_list.add(to_pivot);
+				e_pivot = new Edge(v, pivot);
+				addEdge(v.get_id(), e_pivot);
+				// I am adding this object here to be cleaned up at the end of the procedure.
+				// TODO: verify that it is not wrong
+				pivot_obj_list.add(e_pivot);
 			}
 		}
 		return pivot_obj_list;
 	}
 	
-	
+	private void addEdge(String vertex_id, Edge e) {
+		if (! edges.containsKey(vertex_id)) {
+			edges.put(vertex_id, new LinkedList<>());
+		}
+		edges.get(vertex_id).add(e);
+	}
 
 	/**
 	 * Initialize dijkstra
@@ -161,10 +230,27 @@ public class RouteSearch {
 			distances.put(v, Double.POSITIVE_INFINITY);
 			hops.put(v, Integer.MAX_VALUE);
 			predecessors.put(v, null);
+			v.update_ecc();
+			//set_vertice_capacity();
 		}
 		distances.replace(pivot_begin, now);
 		hops.replace(pivot_begin, 0);
 		unsettled.add(pivot_begin);
+	}
+	
+	/**
+	 * We deal here with predictions.
+	 * We are interested in three prediction:
+	 * 	total size of contact (duration_prediction * speed)
+	 *  average utilization (total - freeCapacityPred)
+	 *  already planned amount for this contact (summed size of planned messages)
+	 * @param v
+	 */
+	void set_vertice_capacity(Vertex v) {
+		double buffer_cap = v.get_metrics().getPredictions().get("BufferSizeCapacity").getValue();
+		double contact_pred_size = v.get_metrics().getPredictions().get("DurationPrediction").getValue();
+		double total_contact_size = Math.min(buffer_cap, contact_pred_size * v.get_transmission_speed());
+//		double avg_utilization = v.get_metrics().getPredictions()
 	}
 	
 	/**
@@ -182,9 +268,9 @@ public class RouteSearch {
 	 *            The end pivot
 	 * @return The shortest path found
 	 */
-	public Path get_path(Vertex end_pivot) {
+	public Path get_path(Vertex last_vertice) {
 		Path p = new Path();
-		p.path = p.construct(end_pivot, predecessors);
+		p.path = p.construct(last_vertice, predecessors);
 		return p;
 	}
 
@@ -239,39 +325,40 @@ public class RouteSearch {
 	private void relax(Vertex v, Message m, List<DTNHost> blacklist) {
 		int size = m.getSize();
 
-//		List<Vertex> neighbors = edges.get(v.get_id()).stream()
-//				.filter(e -> e.get_dst_begin() < this.expire_time) // filter out far in the future vertices
-//				.map(e -> vertices.get(e.get_dest_id()))
-//				.filter(e -> !settled.contains(e))         // filter out already settled vertices
-//				.filter(e -> Collections.disjoint(e.get_hosts(), blacklist)) // filter out already visited nodes
-//				.filter(e -> e.current_capacity() > size)  // filter out contacts without enough capacity
-//				.collect(Collectors.toList());
-
 		List<Vertex> neighbors = new ArrayList<>();
 		Vertex v_dst;
 		DTNHost h_dst;
 		double h_dst_capacity;
 		
-		List<Edge> toDelete = new ArrayList<>();
 		for (Edge e : edges.get(v.get_id())) {
 			if (!(e.get_dst_begin() < this.expire_time)) continue;
 			v_dst = vertices.get(e.get_dest_id());
 			if (settled.contains(v_dst)) continue;
 			if (!Collections.disjoint(v_dst.get_hosts(), blacklist)) continue;
-			if (!(v_dst.current_capacity() > size)) continue;
-			// verify that the destination host has space for the new message
-			h_dst = v_dst.get_other_host(v.get_common_host(v_dst));
-			
-			// capacity taken in account the messages already planned 
-			h_dst_capacity = (v_dst.adjusted_begin() - v_dst.begin())* v_dst.get_transmission_speed();
-			
-			if (h_dst.getRouter().getFreeBufferSize() - h_dst_capacity < m.getSize()) continue;
+			if (!v_dst.is_pivot()) {
+				// verify that the node is capable of transmitting the message
+				if (!(v_dst.pred_transmission_capacity_left() > size))
+					continue;
+
+				// verify that the next hop is able to store the message
+				// therere we need to know, in the vertex, who is the next node
+				DTNHost other = v_dst.get_other_host(v.get_common_host(v_dst));
+				
+				/*TODO:
+				 * What should be done here is to have 2 predictions one to storage A->B, and another B->A
+				 * */
+				if (!(v_dst.pred_storage_capacity() > size))
+					continue;
+			}
 			neighbors.add(v_dst);
 		}
 		
+		/**
+		 * We have to change here to take in account that we don't have absolute time anymore
+		 */
 		for (Vertex n : neighbors) {
-			double at = (double) distance_measure.apply(size, v, n);
-			if (at < n.end()) {
+			double at = n.is_pivot() ? distances.get(v) : (double) distance_measure.apply(size, v, n);
+
 				if (at > distances.get(n)) {
 					continue;
 				} else if (at < distances.get(n)) { // improved distance
@@ -286,7 +373,6 @@ public class RouteSearch {
 						hops.put(n, hops.get(v) + 1);
 					}
 				}
-			}
 		}
 	}
 
@@ -320,11 +406,13 @@ public class RouteSearch {
 			unsettled.remove(next);
 			settled.add(next);
 		}
+		// this return is not being used. TODO: clean up
 		return next;
 	}
 
 	/**
 	 * Find possible contacts for beginning and end pivots
+	 * TODO iri : In the ocgr variant, we ignore the start time
 	 * 
 	 * @param h
 	 *            Host in which path decision is current taking place
@@ -340,18 +428,15 @@ public class RouteSearch {
 		candidates.put("coi_dst", new TreeSet<>(Comparator.comparing(Vertex::adjusted_begin).thenComparing(Vertex::get_id)));
 
 		for (Vertex c : vertices.values()) {
-			if (c.end() < now && c.adjusted_begin() > m.getTtl()) {
-				continue;
-			}
 			if (c.is_pivot()) {
 				continue;
 			}
 			List<DTNHost> hl = c.get_hosts();
 			// contacts including current host (used for pivot_begin) with enough capacity
-			if (hl.contains(h)  && c.current_capacity() > m.getSize()) {
+			if (hl.contains(h)  && c.current_transmission_capacity() > m.getSize()) {
 				candidates.get("coi_src").add(c);
 			}
-			if (hl.contains(m.getTo()) && c.current_capacity() > m.getSize()) {
+			if (hl.contains(m.getTo()) && c.current_transmission_capacity() > m.getSize()) {
 				candidates.get("coi_dst").add(c);
 			}
 		}
@@ -361,6 +446,7 @@ public class RouteSearch {
 
 	/**
 	 * Search least latency
+	 * TODO: we need to delete the pivots 
 	 * 
 	 * @param pivot_candidates:
 	 *            a list of candidates for pivot start and pivot end
@@ -374,13 +460,14 @@ public class RouteSearch {
 		SortedSet<Vertex> coi_src = pivot_candidates.get("coi_src");
 		SortedSet<Vertex> coi_dst = pivot_candidates.get("coi_dst");
 
-		/* Creating pivots and edges for/from them 
+		/**
+		 * Creating pivots and edges for/from them 
 		 * p_begin / p_end is a list of Objects
 		 * the first object is the pivot vertex and the rest of the list 
 		 * are edges added to this pivot.
 		 * We save these edges for cleaning after search, avoiding go through the 
 		 * whole edge list.
-		 * */
+		 */
 		List<Object> p_begin = create_pivot_and_initialize(coi_src, this_host, true);
 		List<Object> p_end = create_pivot_and_initialize(coi_dst, m.getTo(), false);			
 		
@@ -388,27 +475,39 @@ public class RouteSearch {
 		blacklist.remove(this_host);
 		Vertex pivot_begin = (Vertex)p_begin.get(0);
 		Vertex pivot_end = (Vertex)p_end.get(0);
+		Vertex last_node;
 		
-		pivot_end = run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
+		run_dijkstra(pivot_begin, pivot_end, now, m, blacklist);
+		last_node = predecessors.get(pivot_end); 
 		
-		//cleanup edges from vertices to end_pivots
-		for (Edge e: (List<Edge>)(Object)p_end.subList(1, p_end.size())) {
+		// cleanup edges from and to pivots and the pivots themselves
+		clean_pivot(p_begin);
+		clean_pivot(p_end);
+		
+		return last_node;
+	}
+	
+	private void clean_pivot(List<Object> pivot_struct) {
+		for (Edge e: (List<Edge>)(Object)pivot_struct.subList(1, pivot_struct.size())) {
 			edges.get(e.get_src_id()).remove(e);
 		}
-		
-		return pivot_end;
-	}
-		
-		private double final_distance(Vertex pivot) {
-			double ret = 0.0;
-			if (pivot != null) {
-				if (predecessors.get(pivot) != null) {
-					Vertex pred = predecessors.get(pivot);
-					ret = distances.get(pred);
-				}
-			}
-			return ret;
+		Vertex pivot = (Vertex)pivot_struct.get(0);
+		if (edges.containsKey(pivot.get_id())) {
+			edges.remove(pivot.get_id());
 		}
+		vertices.remove(pivot.get_id());
+	}
+	
+	private double final_distance(Vertex pivot) {
+		double ret = 0.0;
+		if (pivot != null) {
+			if (predecessors.get(pivot) != null) {
+				Vertex pred = predecessors.get(pivot);
+				ret = distances.get(pred);
+			}
+		}
+		return ret;
+	}
 
 	/**
 	 * Search the best path using Dijkstra algorithm
@@ -427,7 +526,7 @@ public class RouteSearch {
 	public Vertex search(DTNHost this_host, double now, Message m, int configTtl) {
 		Map<String, SortedSet<Vertex>> pivot_candidates = new HashMap<String, SortedSet<Vertex>>();
 		Vertex pivot_begin = null;
-		Vertex pivot_end = null;
+		Vertex last_node = null;
 		/* transform the ttl (minutes) to the expiration in time (time when the message was
 		*	created + original ttl
 		*/
@@ -436,7 +535,6 @@ public class RouteSearch {
 		} else { 	// ttl is configured in message
 			this.expire_time = m.getTtl() * 60 + now;
 		}
-//		this.expire_time = this.expire_time * 60 + now; // set the expiration time relative to the moment it was created
 		
 
 		/*
@@ -456,7 +554,8 @@ public class RouteSearch {
 		 * Delete unusable vertexes fpc -- first pivot candidate, the last contact from
 		 * that started before now.
 		 */
-		prune(now);
+		//TODO: iri split prune behavior. Currently we are not prunning at all, but we should take out old contacts.
+//		prune(now);
 
 		pivot_candidates = find_contacts_of_interest(this_host, now, m);
 
@@ -465,17 +564,17 @@ public class RouteSearch {
 
 		if (start_candidates_size > 0 && end_candidates_size > 0) {
 			// least latency:
-			pivot_end = search_ll(pivot_candidates, now, m, this_host);
+			last_node = search_ll(pivot_candidates, now, m, this_host);
 		} else {
 			System.out.println("Pivot could not be found. There is no route.");
 		}
 
 		// assert that distance to arrive at destination < expiration time
-		if (final_distance(pivot_end) > expire_time) { 
-			pivot_end = null;
+		if (final_distance(last_node) > expire_time) { 
+			last_node = null;
 		}
 		
-		return pivot_end;
+		return last_node;
 	}
 
 }

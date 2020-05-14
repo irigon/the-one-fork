@@ -1,4 +1,4 @@
-package routing.cgr;
+package routing.ocgr;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Map;
 
 import core.Message;
+import core.SimClock;
+import routing.OCGRRouter;
 
 public class Graph {
 
 	private Map<String, Vertex> vertices;
 	private Map<String, List<Edge>> edges;
+	boolean tainted;
 	
 	public Graph(Map<String, Vertex> vmap , Map<String, List<Edge>> le) {
 		vertices = vmap;
@@ -25,6 +28,15 @@ public class Graph {
 		init_vertices(graph);
 		init_edges(graph);
 	}
+	
+	public boolean is_tainted() {
+		return tainted;
+	}
+	
+	public void set_taint(boolean is_tainted) {
+		tainted = is_tainted;
+	}
+	
 	
 	private void init_vertices(Graph g) {
 		if (g == null) {
@@ -60,6 +72,10 @@ public class Graph {
 	
 	public Map<String, Vertex> get_vertice_map() {
 		return vertices;
+	}
+	
+	public boolean has_vertice(String id) {
+		return vertices.get(id) != null;
 	}
 	
 	public Map<String, List<Edge>> get_edges() {
@@ -114,18 +130,9 @@ public class Graph {
 	
 	/**
 	 * Update the channel capacity through path p for message m.
-	 * Contacts smaller than epslon (milliseconds) are discarded
-	 * 
-	 * When a contact is reduced (consumed) it might create another contact
-	 * We need therefore to fix:
-	 * 	vertices map:
-	 * 		the existent vertice has its end reduced 
-	 * 		the new vertice (if existent) must be added to the vertices map
-	 * 	edges map:
-	 * 		if there is a new contact:
-	 * 			copy the edges parting from the original to it
-	 * 			find out the source of the edges that arrive on it and add an edge to the new
-	 * 
+     * 
+     * Add to every vertice in the path the timestamp and msg size 
+     * 
 	 * ps.: The capacity should have been taking in account in the shortest path calculation.
 	 * therefore, if the path do not support the message size, we have a bug.
 	 * @param p	Path returned from RouteSearch
@@ -142,18 +149,36 @@ public class Graph {
 		List<Vertex> path_as_list = p.get_path_as_list();
 		List<Vertex> fragmented_vertices = new LinkedList<>();
 		
+		double now = SimClock.getTime();
 		for (Vertex v : path_as_list) {
-			comm_start = Math.max(comm_start, v.adjusted_begin()); // time when transmission takes place
-			// TODO: iri move the round function to another place, together with a contains for tuple
-			comm_ends = ContactPlanHandler.round(comm_start + (double)msize/v.get_transmission_speed(), 2); 
-			original_end = v.end();
-			if (comm_start > v.adjusted_begin()) { // split contact
-				split_contact(comm_start, original_end, comm_ends, v, epslon);
-			} else {
-				v.set_adjusted_begin(comm_ends);
-				comm_start = comm_ends;
+			v.add_data(now, m.getSize());
+			//comm_start = v.adjusted_begin(); // time when transmission takes place
+			//comm_ends = ContactPlanHandler.round((double)msize/v.get_transmission_speed(), 2); 
+			//v.set_adjusted_begin(comm_ends);
+		}
+	}
+	
+	public void addVerticeAndEdgesToGraph(Vertex v) {
+		vertices.put(v.get_id(), v);
+		for (Vertex peer_v : vertices.values()) {
+			if (v.get_common_host(peer_v) != null && !v.equals(peer_v)) {			
+				add_edge(v, peer_v);
+				add_edge(peer_v, v);
 			}
-			
+		}
+	}
+	
+	/**
+	 * Find all vertices that the other router knows about and add it to the map
+	 * Add edges to the new vertices
+	 * @param 
+	 */
+	public void extendVerticesAndEdgesToGraph(OCGRRouter r) {
+		Graph otherGraph = r.getGraph();
+		for (Vertex v : otherGraph.get_vertice_map().values()) {
+			if (!vertices.containsKey(v.get_id())) {
+				addVerticeAndEdgesToGraph(v);
+			}
 		}
 	}
 }

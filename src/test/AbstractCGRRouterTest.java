@@ -8,33 +8,40 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import core.Connection;
 import core.Coord;
 import core.DTNHost;
 import core.Message;
 import core.MessageListener;
 import core.NetworkInterface;
+import core.SimClock;
 import junit.framework.TestCase;
 import routing.ContactGraphRouter;
 import routing.MessageRouter;
-import routing.cgr.Contact;
-import routing.cgr.Edge;
-import routing.cgr.Graph;
-import routing.cgr.Path;
-import routing.cgr.RouteSearch;
-import routing.cgr.Vertex;
+import routing.OCGRRouter;
+import routing.ocgr.Contact;
+import routing.ocgr.Edge;
+import routing.ocgr.Graph;
+import routing.ocgr.Path;
+import routing.ocgr.RouteSearch;
+import routing.ocgr.Vertex;
+import routing.ocgr.metrics.Metrics;
 
 public class AbstractCGRRouterTest extends TestCase {
 	
 	private static final int TTL = 300;
 	private static final int TRANSMIT_SPEED = 10;
 	protected static final int BUFFER_SIZE = 100;
-	protected ContactGraphRouter cgr;
+	protected static final boolean UP = true;
+	protected static final boolean DOWN = false;
+
+	protected MessageRouter routerProto;
 	protected static TestSettings ts = new TestSettings();
 	protected TestUtils utils;
 	protected Coord c0 = new Coord(0,0);
 	protected MessageChecker mc;
-
-
+	protected SimClock clock = SimClock.getInstance();
+	
 	protected DTNHost h10;
 	protected DTNHost h11;
 	protected DTNHost h12;
@@ -270,6 +277,16 @@ public class AbstractCGRRouterTest extends TestCase {
 		return edges;
 	}
 	
+	protected void setRouterProto(MessageRouter r) {
+		this.routerProto = r;
+	}
+
+	protected void updateAllNodes() {
+		for (DTNHost node : utils.getAllHosts()) {
+			node.update(true);
+		}
+	}
+	
 	@Override
 	public void setUp() throws Exception {
 		super.setUp();
@@ -283,7 +300,7 @@ public class AbstractCGRRouterTest extends TestCase {
 		ts.setNameSpace(TestUtils.IFACE_NS);
 		ts.putSetting(NetworkInterface.TRANSMIT_SPEED_S, ""+TRANSMIT_SPEED);
 
-		this.utils = new TestUtils(null,ml,ts);
+		this.utils = new TestUtils(null,ml,ts,routerProto);
 		
 		core.NetworkInterface.reset();
 		core.DTNHost.reset();
@@ -358,26 +375,26 @@ public class AbstractCGRRouterTest extends TestCase {
 		c_p2_x9_200_210  = new Contact(hp2,  hx9, 200.0, 210.0);
 		c_p1_x8_330_340  = new Contact(hp1,  hx8, 330.0, 340.0);
 
-		v1  = new Vertex("vertex_1",  c1,  false);
-		v2  = new Vertex("pivot_c1",  c1,  true);
-		v21 = new Vertex("vertex_21", c2,  false);
-		v3  = new Vertex("vertex_3",  c3,  false);
-		v31 = new Vertex("vertex_31", c31, false);
-		v4  = new Vertex("vertex_4",  c4,  false);
-		v41 = new Vertex("vertex_41", c41, false);
-		v42 = new Vertex("vertex_42", c42, false);
-		v421= new Vertex("vertex_421", c421, false);
-		v5  = new Vertex("vertex_5",  c5,  false);
-		v51 = new Vertex("vertex_51", c51, false);
-		v52 = new Vertex("vertex_52", c52, false);
-		v53 = new Vertex("vertex_53", c53, false);
-		v54 = new Vertex("vertex_54", c54, false);
-		v6  = new Vertex("vertex_6",  c6,  false);
-		v61  = new Vertex("vertex_61",  c61,  false);
-		v7  = new Vertex("vertex_7",  c7,  false);
-		v71  = new Vertex("vertex_71",  c71,  false);
-		v8  = new Vertex("vertex_8",  c8,  false);
-		v9  = new Vertex("vertex_9",  c9,  false);
+		v1  = new Vertex("vertex_1",  c1, Metrics.create_metrics(), false);
+		v2  = new Vertex("pivot_c1",  c1, Metrics.create_metrics(),  true);
+		v21 = new Vertex("vertex_21", c2, Metrics.create_metrics(),  false);
+		v3  = new Vertex("vertex_3",  c3, Metrics.create_metrics(),  false);
+		v31 = new Vertex("vertex_31", c31, Metrics.create_metrics(), false);
+		v4  = new Vertex("vertex_4",  c4, Metrics.create_metrics(),  false);
+		v41 = new Vertex("vertex_41", c41, Metrics.create_metrics(), false);
+		v42 = new Vertex("vertex_42", c42, Metrics.create_metrics(), false);
+		v421= new Vertex("vertex_421", c421, Metrics.create_metrics(), false);
+		v5  = new Vertex("vertex_5",  c5, Metrics.create_metrics(),  false);
+		v51 = new Vertex("vertex_51", c51, Metrics.create_metrics(), false);
+		v52 = new Vertex("vertex_52", c52, Metrics.create_metrics(), false);
+		v53 = new Vertex("vertex_53", c53, Metrics.create_metrics(), false);
+		v54 = new Vertex("vertex_54", c54, Metrics.create_metrics(), false);
+		v6  = new Vertex("vertex_6",  c6, Metrics.create_metrics(),  false);
+		v61  = new Vertex("vertex_61",  c61, Metrics.create_metrics(),  false);
+		v7  = new Vertex("vertex_7",  c7, Metrics.create_metrics(),  false);
+		v71  = new Vertex("vertex_71",  c71, Metrics.create_metrics(),  false);
+		v8  = new Vertex("vertex_8",  c8, Metrics.create_metrics(),  false);
+		v9  = new Vertex("vertex_9",  c9, Metrics.create_metrics(),  false);
 		
 		e1  = new Edge(v3, v2);
 		e2  = new Edge(v3, v4);
@@ -607,28 +624,28 @@ public class AbstractCGRRouterTest extends TestCase {
 		 * 		 * 
 		 */
 		vertex_list09 = new ArrayList<>();
-		vertex_list09.add(new Vertex("vertex_x10_p4_100_110", c_x10_p4_100_110, false));
-		vertex_list09.add(new Vertex("vertex_x10_p5_307_320", c_x10_p5_307_320, false));
-		vertex_list09.add(new Vertex("vertex_x10_p4_149_160", c_x10_p4_149_160, false));
-		vertex_list09.add(new Vertex("vertex_x10_p5_200_210", c_x10_p5_200_210, false));
-		vertex_list09.add(new Vertex("vertex_p4_x6_130_150", c_p4_x6_130_150, false));
-		vertex_list09.add(new Vertex("vertex_p5_x7_325_340", c_p5_x7_325_340, false));
-		vertex_list09.add(new Vertex("vertex_p4_x6_190_200", c_p4_x6_190_200, false));
-		vertex_list09.add(new Vertex("vertex_p5_x7_220_240", c_p5_x7_220_240, false));
-		vertex_list09.add(new Vertex("vertex_x6_p3_140_150", c_x6_p3_140_150, false));
-		vertex_list09.add(new Vertex("vertex_x7_p2_370_380", c_x7_p2_370_380, false));
-		vertex_list09.add(new Vertex("vertex_x6_p1_220_240", c_x6_p1_220_240, false));
-		vertex_list09.add(new Vertex("vertex_p3_x7_250_280", c_p3_x7_250_280, false));
-		vertex_list09.add(new Vertex("vertex_p3_x7_160_170", c_p3_x7_160_170, false));
-		vertex_list09.add(new Vertex("vertex_p2_x9_390_400", c_p2_x9_390_400, false));
-		vertex_list09.add(new Vertex("vertex_p1_x8_250_260", c_p1_x8_250_260, false));
-		vertex_list09.add(new Vertex("vertex_x6_p3_250_280", c_x6_p3_250_280, false));
-		vertex_list09.add(new Vertex("vertex_p5_x7_160_171", c_p5_x7_160_171, false));
-		vertex_list09.add(new Vertex("vertex_p4_x6_250_280", c_p4_x6_250_280, false));
-		vertex_list09.add(new Vertex("vertex_x7_p2_160_171", c_x7_p2_160_171, false));
-		vertex_list09.add(new Vertex("vertex_x6_p1_300_320", c_x6_p1_300_320, false));
-		vertex_list09.add(new Vertex("vertex_p2_x9_200_210", c_p2_x9_200_210, false));
-		vertex_list09.add(new Vertex("vertex_p1_x8_330_340", c_p1_x8_330_340, false)); 
+		vertex_list09.add(new Vertex("vertex_x10_p4_100_110", c_x10_p4_100_110, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x10_p5_307_320", c_x10_p5_307_320, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x10_p4_149_160", c_x10_p4_149_160, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x10_p5_200_210", c_x10_p5_200_210, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p4_x6_130_150", c_p4_x6_130_150, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p5_x7_325_340", c_p5_x7_325_340, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p4_x6_190_200", c_p4_x6_190_200, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p5_x7_220_240", c_p5_x7_220_240, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x6_p3_140_150", c_x6_p3_140_150, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x7_p2_370_380", c_x7_p2_370_380, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x6_p1_220_240", c_x6_p1_220_240, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p3_x7_250_280", c_p3_x7_250_280, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p3_x7_160_170", c_p3_x7_160_170, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p2_x9_390_400", c_p2_x9_390_400, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p1_x8_250_260", c_p1_x8_250_260, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x6_p3_250_280", c_x6_p3_250_280, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p5_x7_160_171", c_p5_x7_160_171, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p4_x6_250_280", c_p4_x6_250_280, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x7_p2_160_171", c_x7_p2_160_171, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_x6_p1_300_320", c_x6_p1_300_320, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p2_x9_200_210", c_p2_x9_200_210, Metrics.create_metrics(), false));
+		vertex_list09.add(new Vertex("vertex_p1_x8_330_340", c_p1_x8_330_340, Metrics.create_metrics(), false)); 
 		
 		
 		Map<String, Vertex> vmap09 = initialize_vmap(vertex_list09);

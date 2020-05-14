@@ -1,4 +1,4 @@
-package routing.cgr;
+package routing.ocgr;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,7 +21,8 @@ public class Contact {
 	private double begin;
 	private double end;
 	// Adjusted contact begin due to resource allocation
-	private double adjusted_begin;
+	private double adjusted_begin;	// pred_utilization + planned for this round
+	private double pred_utilization;
 	private int transmission_speed;
 	private String interface_type;
 	private int hash;
@@ -67,8 +68,7 @@ public class Contact {
 	 * Goes through every interface and gets the first pair of interfaces of the 
 	 * same type (compatible) that have a range wide enough to start a communication
 	 * 
-	 * WARNING: this function will just return the right value if this function is called
-	 * when both nodes in contact at the time when the method is called (on the fly)
+	 * WARNING: this function will just work if called when the nodes are in contact 
 	 * 
 	 * @param x DTNHost partner
 	 * @param y DTNHost partner
@@ -103,7 +103,7 @@ public class Contact {
 		transmission_speed = ts;
 	}
 	
-	public double get_current_capacity() {
+	public double get_current_transmission_capacity() {
 		return (end - adjusted_begin) * transmission_speed;
 	}
 	
@@ -148,6 +148,21 @@ public class Contact {
 		return adjusted_begin;
 	}
 
+	/* needed by ocgr to capacity calculation*/
+	public void set_begin(double new_begin) {
+		this.begin = new_begin;
+	}
+
+//	public void set_pred_utilization(double t) {
+//		this.pred_utilization = t;
+//	}
+//
+//	/* return the */
+//	public double predicted_free_capacity() {
+//		double already_planned = this.adjusted_begin - this.begin;
+//		return this.end - this.pred_utilization - already_planned;
+//	}
+	
 	public void set_adjusted_begin(double new_begin) {
 		this.adjusted_begin = new_begin;
 	}

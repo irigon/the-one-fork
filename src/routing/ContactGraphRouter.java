@@ -22,7 +22,7 @@ import routing.cgr.ContactPlanHandler;
 import routing.cgr.Graph;
 import routing.cgr.Path;
 import routing.cgr.RouteSearch;
-import routing.cgr.Vertex;
+import routing.ocgr.Vertex;
 import routing.util.RoutingInfo;
 import util.Tuple;
 
