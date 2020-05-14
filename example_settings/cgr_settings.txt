@@ -43,21 +43,21 @@ ProphetRouter.secondsInTimeUnit = 1
 #Group.sendQueue = 2
 
 # p0
-Group1.routeFile = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/1.wkt
+Group1.routeFile = data/RoleBasedRouting/1.wkt
 Group1.interface1 = fourthinterface
 # p1
-Group2.routeFile = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/2.wkt
+Group2.routeFile = data/RoleBasedRouting/2.wkt
 Group2.interface1 = fourthinterface
 # p2
-Group3.routeFile = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/3.wkt
+Group3.routeFile = data/RoleBasedRouting/3.wkt
 Group3.interface1 = redInterface
 Group3.waitTime = 1,1
 Group3.speed = 15,30
 # p3
-Group4.routeFile = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/4.wkt
+Group4.routeFile = data/RoleBasedRouting/4.wkt
 Group4.interface1 = yellowInterface
 # p4
-Group5.routeFile = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/5.wkt
+Group5.routeFile = data/RoleBasedRouting/5.wkt
 Group5.interface1 = blueInterface
 
 Group6.groupID = x
@@ -91,11 +91,11 @@ Group10.interface2 = blueInterface
 
 ## Map based movement -movement model specific settings
 MapBasedMovement.nrofMapFiles = 5
-MapBasedMovement.mapFile1 = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/1.wkt
-MapBasedMovement.mapFile2 = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/2.wkt
-MapBasedMovement.mapFile3 = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/3.wkt
-MapBasedMovement.mapFile4 = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/4.wkt
-MapBasedMovement.mapFile5 = /home/jose/Programming/Java/the-one-scripts/data/RoleBasedRouting/5.wkt
+MapBasedMovement.mapFile1 = data/RoleBasedRouting/1.wkt
+MapBasedMovement.mapFile2 = data/RoleBasedRouting/2.wkt
+MapBasedMovement.mapFile3 = data/RoleBasedRouting/3.wkt
+MapBasedMovement.mapFile4 = data/RoleBasedRouting/4.wkt
+MapBasedMovement.mapFile5 = data/RoleBasedRouting/5.wkt
 
 
 ## Message creation parameters
@@ -124,7 +124,7 @@ Report.nrofReports = 1
 # length of the warm up period (simulated seconds)
 Report.warmup = 0
 # default directory of reports (can be overridden per Report with output setting)
-Report.reportDir = /home/jose/Programming/Java/the-one-scripts/reports/
+Report.reportDir = reports/
 Report.report1 = MessageStatsReport
 #Report.report2 = CGRScheduledPathReport
 #Report.report3 = MessagePathReport
